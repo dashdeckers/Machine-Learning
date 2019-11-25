@@ -93,12 +93,14 @@ def add_quiver(ax, weights):
     )
 
     # Choose two points on the perpendicular vector
-    P1 =  perp_vec * 2
-    P2 =  perp_vec * -2
+    P1 =  perp_vec
+    P2 =  perp_vec * -1
+
+    debug.append((P1, P2))
 
     # Make sure the line between the points goes through the origin
     assert (P1.x * (P2.y - P1.y) == P1.y * (P2.x - P1.x))
-
+    print(f'W: {weights}')
     print(f'P1: {P1.coords}, P2: {P2.coords}')
 
     # Draw a line between the two points
@@ -129,6 +131,8 @@ def make_plot(xi, labels):
     # Show the plot and return it
     plt.axis('equal')
     plt.show(block=False)
+    plt.xlim(-2, 2)
+    plt.ylim(-2, 2)
     fig.canvas.draw()
     return ax, fig
 
@@ -155,7 +159,7 @@ def response(w, xi, theta=0):
 
 # Set global variables
 N = 2                       # Number of Dimensions
-P = 3                       # Number of Datapoints
+P = 5                       # Number of Datapoints
 n_max = 5                   # Number of Epochs
 Q, lines = (None, None)     # Initialize plot data
 
@@ -166,6 +170,9 @@ ax, fig = make_plot(xi, labels)
 # Initialize Perceptron parameters
 weights = np.zeros(shape=(N,))
 
+debug = list()
+import pprint
+pp = pprint.PrettyPrinter()
 
 # Epoch loop
 for epoch in range(n_max):
@@ -184,9 +191,10 @@ for epoch in range(n_max):
         # If if there is a Quiver, remove it
         if Q is not None and lines is not None:
             Q.remove()
+            pp.pprint(lines[0].__dict__)
             lines.pop(0).remove()
 
-        # If you can draw one, draw a Quiver
+        # If weights is not a zero vector, draw a Quiver
         if np.any(weights):
             Q, lines = add_quiver(ax, weights)
             fig.canvas.draw()
@@ -195,3 +203,19 @@ for epoch in range(n_max):
     # If we have not updated any weight in this data loop, stop
     if stop_early:
         break
+
+
+
+
+
+
+# def is_parallel(P1, P2, P3, P4):
+#     return abs((P2.x - P1.x)*(P4.y - P3.y) - (P4.x - P3.x)*(P2.y - P1.y)) < 1e-10
+
+# def check_parallel():
+#     ref_point = debug.pop()
+#     for point in debug:
+#         if not is_parallel(*ref_point, *point):
+#             print('Not Parallel!')
+#         else:
+#             print('Parallel')
