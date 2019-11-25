@@ -36,11 +36,17 @@ class Vector:
         return np.sqrt(np.sum(np.square(self.coords)))
 
     def normalized(self):
+        assert self.magnitude != 0
         return Vector(np.divide(self.coords, self.magnitude()))
 
     def perpendicular(self):
         # Works for 2D only
         assert len(self.coords) == 2
+
+        # If this is a zero vector, return self
+        if not any(self.coords):
+            return self
+
         return Vector((1, -self.x / self.y))
 
 def generate_data(P, N=2):
@@ -60,62 +66,71 @@ def generate_data(P, N=2):
 
     return data, labels
 
-def plot(x, y, labels, weight_vec=None):
-    ''' Plots the data points in x and y in two different colors
-    depending on the labels, and shows the weight vector from the
-    origin as well as the linear separation line orthogonal to it.
+def add_quiver(ax, weights):
+    ''' Add a Quiver showing the weight vector to the plot. Only
+    works in 2D and not if the weight vector is a zero vector.
+
+    Also adds a line perpendicular to the weight vector, which
+    goes through the origin.
     '''
+    assert len(weights) == 2
+    assert np.any(weights)
+
+    # Get origin, weight vector and perpendicular vector
+    origin = Vector((0, 0))
+    weight_vec = Vector(weights).normalized()
+    perp_vec = weight_vec.perpendicular().normalized()
+    assert np.dot(weight_vec.coords, perp_vec.coords) <= 1e-5
+
+    # Draw the weight vector quiver
+    Q = ax.quiver(
+        *origin.coords,
+        *weight_vec.coords,
+        color=['black'],
+        angles='xy',
+        scale_units='xy',
+        scale=1
+    )
+
+    # Choose two points on the perpendicular vector
+    P1 =  perp_vec * 2
+    P2 =  perp_vec * -2
+
+    # Make sure the line between the points goes through the origin
+    assert (P1.x * (P2.y - P1.y) == P1.y * (P2.x - P1.x))
+
+    print(f'P1: {P1.coords}, P2: {P2.coords}')
+
+    # Draw a line between the two points
+    lines = ax.plot(
+        P1.coords,
+        P2.coords,
+        c='black',
+        marker='.',
+        linestyle=':'
+    )
+    return Q, lines
+
+def make_plot(xi, labels):
+    ''' Creates a 2D plot with the (x, y) coordinates in xi, in two 
+    different colors depending on the labels. The plot is interactive
+    to allow for iterative updating.
+    '''
+    x, y = xi.T
     assert len(x) == len(y), 'x and y must be equally long'
+
     # Create a figure and plot the points
     plt.ion()
     fig = plt.figure()
-    ax = fig.add_subplot(111)
+    ax  = fig.add_subplot(111)
     ax.scatter(x, y, c=labels)
     fig.canvas.draw()
 
-    # If weights are given
-    if weight_vec is not None and len(weight_vec) == 2:
-        # Draw the weight vector
-        origin = (0, 0)
-        Q = ax.quiver(
-            *origin,
-            *weight_vec,
-            color=['black'],
-            angles='xy',
-            scale_units='xy',
-            scale=1
-        )
-        # Build a normalized, perpendicular vector to w
-        w = Vector(weight_vec)
-        w_perp_normalized = w.perpendicular().normalized()
-
-        # If it really is perpendicular, the dot product is zero
-        assert np.dot(w.coords, w_perp_normalized.coords) == 0
-
-        # Choose two points on that vector to draw the line
-        P1 = w + w_perp_normalized * 2
-        P2 = w - w_perp_normalized * 2
-
-        # Draw the linear separation orthogonal to weight vector
-        ax.plot(
-            P1.coords,
-            P2.coords,
-            c='black',
-            marker='.',
-            linestyle=':'
-        )
-
-    # Show the plot
+    # Show the plot and return it
     plt.axis('equal')
     plt.show(block=False)
     fig.canvas.draw()
-    time.sleep(1)
-
-    # for i in range(10):
-    #     Q.set_offsets(Q.get_offsets() + np.array([0.1*i, 0.1*i]))
-    #     fig.canvas.draw()
-    #     time.sleep(0.1)
-
+    return ax, fig
 
 def sign(x, theta=0):
     ''' The sign function:
@@ -132,22 +147,51 @@ def sign(x, theta=0):
     res[res == 0] = 1
     return res
 
-def response(w, xi, theta):
+def response(w, xi, theta=0):
     '''
     '''
     return sign(np.dot(w, xi), theta)
 
-# Number of Dimensions
-N = 2
-# Number of Datapoints
-P = 100
 
-# Data
+# Set global variables
+N = 2                       # Number of Dimensions
+P = 3                       # Number of Datapoints
+n_max = 5                   # Number of Epochs
+Q, lines = (None, None)     # Initialize plot data
+
+# Generate data and plot
 xi, labels = generate_data(P, N)
-x, y = xi.T
+ax, fig = make_plot(xi, labels)
 
-# Params
+# Initialize Perceptron parameters
 weights = np.zeros(shape=(N,))
 
 
-plot(x, y, labels, [5, 5])
+# Epoch loop
+for epoch in range(n_max):
+    stop_early = True
+
+    # Data loop
+    for xi_t, label_t in zip(xi, labels):
+        # Get the error
+        E_t = response(weights, xi_t) * label_t
+
+        # If condition, update weights and don't stop early        
+        if E_t <= 0:
+            weights += (xi_t * label_t)/N
+            stop_early = False
+
+        # If if there is a Quiver, remove it
+        if Q is not None and lines is not None:
+            Q.remove()
+            lines.pop(0).remove()
+
+        # If you can draw one, draw a Quiver
+        if np.any(weights):
+            Q, lines = add_quiver(ax, weights)
+            fig.canvas.draw()
+            time.sleep(0.5)
+
+    # If we have not updated any weight in this data loop, stop
+    if stop_early:
+        break
