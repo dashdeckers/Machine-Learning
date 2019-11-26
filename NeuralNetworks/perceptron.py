@@ -41,7 +41,7 @@ class Vector:
 
     def perpendicular(self):
         # Works for 2D only
-        assert len(self.coords) == 2
+        assert len(self.coords) == 2, 'Perpendicular only works in 2D'
 
         # If this is a zero vector, return self
         if not any(self.coords):
@@ -77,14 +77,13 @@ def add_quiver(ax, weights, verbose=False):
     Also adds a line perpendicular to the weight vector, which
     goes through the origin.
     '''
-    assert len(weights) == 2
-    assert np.any(weights)
+    assert len(weights) == 2, 'Weights must be 2D'
+    assert np.any(weights), 'Weights cannot be zero vector'
 
     # Get origin, weight vector and perpendicular vector
     origin = Vector((0, 0))
     weight_vec = Vector(weights).normalized()
     perp_vec = weight_vec.perpendicular().normalized()
-    assert np.dot(weight_vec.coords, perp_vec.coords) <= 1e-5
 
     # Draw the weight vector quiver
     Q = ax.quiver(
@@ -121,10 +120,13 @@ def make_plot(xi, labels, xlim=[-3, 3], ylim=[-3, 3]):
     different colors depending on the labels. The plot is interactive
     to allow for iterative updating.
     '''
+    assert xi.shape[1] == 2, 'Can only plot in 2D'
+
     # Create a figure and plot the points
     plt.ion()
     fig = plt.figure()
     ax  = fig.add_subplot(111)
+    x, y = xi.T
     ax.scatter(x, y, c=labels)
     fig.canvas.draw()
 
@@ -174,8 +176,8 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
     # Initialize Perceptron parameters
     weights = np.zeros(shape=(N,))
 
-    # Initialize plot data
-    if D == 2:
+    # Initialize plot data (only available in 2D)
+    if N == 2:
         ax, fig, _ = make_plot(xi, labels)
         Q, lines = (None, None)
 
@@ -194,7 +196,8 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
                 weights += (xi_t * label_t)/N
                 stop_early = False
 
-            if D == 2:
+            # Only plot in 2D
+            if N == 2:
                 # If if there is a Quiver, remove it
                 if Q is not None and lines is not None:
                     Q.remove()
