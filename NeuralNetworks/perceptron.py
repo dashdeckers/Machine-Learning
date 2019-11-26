@@ -71,7 +71,7 @@ def generate_data(P, N=2, mean=0, variance=1, labels='random'):
 
     return data, labels
 
-def add_quiver(ax, weights, debug=False):
+def add_quiver(ax, weights, verbose=False):
     ''' Add a Quiver showing the weight vector to the plot. Only
     works in 2D and not if the weight vector is a zero vector.
 
@@ -101,8 +101,8 @@ def add_quiver(ax, weights, debug=False):
     P1 = perp_vec
     P2 = perp_vec * -1
 
-    # Print stuff if debug is set to True
-    if debug:
+    # Print stuff if verbose is set to True
+    if verbose:
         print(f'Weight Vector: {weight_vec.coords}')
         print(f'Perp   Vector: {perp_vec.coords}')
         print(f'P1: {P1.coords}, P2: {P2.coords}')
@@ -162,19 +162,25 @@ def response(w, xi, theta=0):
     '''
     return sign(np.dot(w, xi), theta)
 
-def run_algorithm(debug=False):
-    # Set global variables
-    N = 2                       # Number of Dimensions
-    P = 5                       # Number of Datapoints
-    n_max = 5                   # Number of Epochs
-    Q, lines = (None, None)     # Initialize plot data
+def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
+    ''' Rosenblatt learning algorithm, where:
 
+    N is the number of dimensions
+    P is the number of datapoints
+    n_max is the number of Epochs to run for
+
+    if verbose is set to True, it will print more than
+    just the Epoch progress.
+    '''
     # Generate data and plot
     xi, labels = generate_data(P, N)
     ax, fig, _ = make_plot(xi, labels)
 
     # Initialize Perceptron parameters
     weights = np.zeros(shape=(N,))
+
+    # Initialize plot data
+    Q, lines = (None, None)
 
     # Epoch loop
     for epoch in range(n_max):
@@ -198,7 +204,7 @@ def run_algorithm(debug=False):
 
             # If weights is not a zero vector, draw a Quiver
             if np.any(weights):
-                Q, lines = add_quiver(ax, weights, debug)
+                Q, lines = add_quiver(ax, weights, verbose)
                 fig.canvas.draw()
                 time.sleep(0.5)
 
@@ -206,8 +212,8 @@ def run_algorithm(debug=False):
         if stop_early:
             break
 
-
-
+if __name__ == '__main__':
+    run_rosenblatt()
 
 
 
