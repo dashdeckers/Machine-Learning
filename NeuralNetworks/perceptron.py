@@ -47,26 +47,31 @@ class Vector:
         if not any(self.coords):
             return self
 
+        return Vector((self.y, -self.x))
         return Vector((1, -self.x / self.y))
 
-def generate_data(P, N=2):
+def generate_data(P, N=2, mean=0, variance=1, labels='random'):
     ''' Generates P randomly generated N-dimensional feature
-    vectors and corresponding binary labels.
+    vectors and corresponding labels.
 
     The feature vector values are sampled from a Gaussian
-    distribution with mean 0 and variance 1, and the binary
-    labels are randomly selected from {-1, 1} with an even
-    distribution.
+    distribution with mean and variance, and the binary
+    labels are either randomly selected from {-1, 1} with
+    an even distribution, or equal to the value of labels.
     '''
-    mean = [0] * N
-    covar = np.identity(N)
+    mean = [mean] * N
+    covar = np.identity(N) * variance
 
     data = np.random.multivariate_normal(mean, covar, P)
-    labels = np.random.choice([-1, 1], P)
+
+    if labels == 'random':
+        labels = np.random.choice([-1, 1], P)
+    else:
+        labels = np.array([labels] * P)
 
     return data, labels
 
-def add_quiver(ax, weights):
+def add_quiver(ax, weights, debug=False):
     ''' Add a Quiver showing the weight vector to the plot. Only
     works in 2D and not if the weight vector is a zero vector.
 
@@ -93,27 +98,26 @@ def add_quiver(ax, weights):
     )
 
     # Choose two points on the perpendicular vector
-    P1 =  perp_vec
-    P2 =  perp_vec * -1
+    P1 = perp_vec
+    P2 = perp_vec * -1
 
-    debug.append((P1, P2))
-
-    # Make sure the line between the points goes through the origin
-    assert (P1.x * (P2.y - P1.y) == P1.y * (P2.x - P1.x))
-    print(f'W: {weights}')
-    print(f'P1: {P1.coords}, P2: {P2.coords}')
+    # Print stuff if debug is set to True
+    if debug:
+        print(f'Weight Vector: {weight_vec.coords}')
+        print(f'Perp   Vector: {perp_vec.coords}')
+        print(f'P1: {P1.coords}, P2: {P2.coords}')
 
     # Draw a line between the two points
     lines = ax.plot(
-        P1.coords,
-        P2.coords,
+        [P1.x, P2.x],
+        [P1.y, P2.y],
         c='black',
         marker='.',
         linestyle=':'
     )
     return Q, lines
 
-def make_plot(xi, labels):
+def make_plot(xi, labels, xlim=[-3, 3], ylim=[-3, 3]):
     ''' Creates a 2D plot with the (x, y) coordinates in xi, in two 
     different colors depending on the labels. The plot is interactive
     to allow for iterative updating.
@@ -131,10 +135,10 @@ def make_plot(xi, labels):
     # Show the plot and return it
     plt.axis('equal')
     plt.show(block=False)
-    plt.xlim(-2, 2)
-    plt.ylim(-2, 2)
+    plt.xlim(*xlim)
+    plt.ylim(*ylim)
     fig.canvas.draw()
-    return ax, fig
+    return ax, fig, plt
 
 def sign(x, theta=0):
     ''' The sign function:
@@ -152,70 +156,94 @@ def sign(x, theta=0):
     return res
 
 def response(w, xi, theta=0):
-    '''
+    ''' The Error term E
+
+    E = ???
     '''
     return sign(np.dot(w, xi), theta)
 
+def run_algorithm(debug=False):
+    # Set global variables
+    N = 2                       # Number of Dimensions
+    P = 5                       # Number of Datapoints
+    n_max = 5                   # Number of Epochs
+    Q, lines = (None, None)     # Initialize plot data
 
-# Set global variables
-N = 2                       # Number of Dimensions
-P = 5                       # Number of Datapoints
-n_max = 5                   # Number of Epochs
-Q, lines = (None, None)     # Initialize plot data
+    # Generate data and plot
+    xi, labels = generate_data(P, N)
+    ax, fig, _ = make_plot(xi, labels)
 
-# Generate data and plot
-xi, labels = generate_data(P, N)
-ax, fig = make_plot(xi, labels)
+    # Initialize Perceptron parameters
+    weights = np.zeros(shape=(N,))
 
-# Initialize Perceptron parameters
-weights = np.zeros(shape=(N,))
+    # Epoch loop
+    for epoch in range(n_max):
+        print(f'Epoch {epoch}/{n_max}')
+        stop_early = True
 
-debug = list()
-import pprint
-pp = pprint.PrettyPrinter()
+        # Data loop
+        for xi_t, label_t in zip(xi, labels):
+            # Get the error
+            E_t = response(weights, xi_t) * label_t
 
-# Epoch loop
-for epoch in range(n_max):
-    stop_early = True
+            # If condition, update weights and don't stop early        
+            if E_t <= 0:
+                weights += (xi_t * label_t)/N
+                stop_early = False
 
-    # Data loop
-    for xi_t, label_t in zip(xi, labels):
-        # Get the error
-        E_t = response(weights, xi_t) * label_t
+            # If if there is a Quiver, remove it
+            if Q is not None and lines is not None:
+                Q.remove()
+                lines.pop(0).remove()
 
-        # If condition, update weights and don't stop early        
-        if E_t <= 0:
-            weights += (xi_t * label_t)/N
-            stop_early = False
+            # If weights is not a zero vector, draw a Quiver
+            if np.any(weights):
+                Q, lines = add_quiver(ax, weights, debug)
+                fig.canvas.draw()
+                time.sleep(0.5)
 
-        # If if there is a Quiver, remove it
-        if Q is not None and lines is not None:
-            Q.remove()
-            pp.pprint(lines[0].__dict__)
-            lines.pop(0).remove()
-
-        # If weights is not a zero vector, draw a Quiver
-        if np.any(weights):
-            Q, lines = add_quiver(ax, weights)
-            fig.canvas.draw()
-            time.sleep(0.5)
-
-    # If we have not updated any weight in this data loop, stop
-    if stop_early:
-        break
+        # If we have not updated any weight in this data loop, stop
+        if stop_early:
+            break
 
 
 
 
 
 
-# def is_parallel(P1, P2, P3, P4):
-#     return abs((P2.x - P1.x)*(P4.y - P3.y) - (P4.x - P3.x)*(P2.y - P1.y)) < 1e-10
 
-# def check_parallel():
-#     ref_point = debug.pop()
-#     for point in debug:
-#         if not is_parallel(*ref_point, *point):
-#             print('Not Parallel!')
-#         else:
-#             print('Parallel')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Random irrelevant stuff
+
+def test_dataplot():
+    ''' Testing the new generate_data
+    '''
+    xi1, labels1 = generate_data(50, 2, mean=1, variance=1, labels=-1)
+    xi2, labels2 = generate_data(50, 2, mean=3, variance=1, labels=1)
+    ax, fig, plt = make_plot(xi1, labels1, xlim=[-2, 6], ylim=[-2, 6])
+
+    x2, y2 = xi2.T
+    ax.scatter(x2, y2, c='red')
+
+    return ax, fig, plt
+
+def get_solution(phi, y):
+    ''' The shortcut solution from the linear regression part of the
+    lecture notes.
+    '''
+    return np.dot(np.dot(np.linalg.inv(np.dot(phi.T, phi)), phi.T), y)
