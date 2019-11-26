@@ -48,7 +48,6 @@ class Vector:
             return self
 
         return Vector((self.y, -self.x))
-        return Vector((1, -self.x / self.y))
 
 def generate_data(P, N=2, mean=0, variance=1, labels='random'):
     ''' Generates P randomly generated N-dimensional feature
@@ -122,9 +121,6 @@ def make_plot(xi, labels, xlim=[-3, 3], ylim=[-3, 3]):
     different colors depending on the labels. The plot is interactive
     to allow for iterative updating.
     '''
-    x, y = xi.T
-    assert len(x) == len(y), 'x and y must be equally long'
-
     # Create a figure and plot the points
     plt.ion()
     fig = plt.figure()
@@ -174,13 +170,14 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
     '''
     # Generate data and plot
     xi, labels = generate_data(P, N)
-    ax, fig, _ = make_plot(xi, labels)
 
     # Initialize Perceptron parameters
     weights = np.zeros(shape=(N,))
 
     # Initialize plot data
-    Q, lines = (None, None)
+    if D == 2:
+        ax, fig, _ = make_plot(xi, labels)
+        Q, lines = (None, None)
 
     # Epoch loop
     for epoch in range(n_max):
@@ -197,20 +194,24 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
                 weights += (xi_t * label_t)/N
                 stop_early = False
 
-            # If if there is a Quiver, remove it
-            if Q is not None and lines is not None:
-                Q.remove()
-                lines.pop(0).remove()
+            if D == 2:
+                # If if there is a Quiver, remove it
+                if Q is not None and lines is not None:
+                    Q.remove()
+                    lines.pop(0).remove()
 
-            # If weights is not a zero vector, draw a Quiver
-            if np.any(weights):
-                Q, lines = add_quiver(ax, weights, verbose)
-                fig.canvas.draw()
-                time.sleep(0.5)
+                # If weights is not a zero vector, draw a Quiver
+                if np.any(weights):
+                    Q, lines = add_quiver(ax, weights, verbose)
+                    fig.canvas.draw()
+                    time.sleep(0.5)
 
-        # If we have not updated any weight in this data loop, stop
+        # If we haven't updated any weight in this data loop, success
         if stop_early:
-            break
+            return (True, weights)
+
+    # If the stop early condition never happened, failure
+    return (False, weights)
 
 if __name__ == '__main__':
     run_rosenblatt()
