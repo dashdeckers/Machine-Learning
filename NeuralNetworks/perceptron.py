@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 
 class Vector:
     ''' A helper class to make easier to work with Vectors in
@@ -132,7 +133,8 @@ def make_plot(xi, labels, xlim=[-3, 3], ylim=[-3, 3]):
 
     # Show the plot and return it
     plt.axis('equal')
-    plt.show(block=False)
+    plt.show()
+    plt.pause(0.0005)
     plt.xlim(*xlim)
     plt.ylim(*ylim)
     fig.canvas.draw()
@@ -183,7 +185,9 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
 
     # Epoch loop
     for epoch in range(n_max):
-        print(f'Epoch {epoch}/{n_max}')
+        # Suppress prints for large testing banks
+        if(n_max < 10):
+            print(f'Epoch {epoch}/{n_max}')
         stop_early = True
 
         # Data loop
@@ -207,6 +211,7 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
                 if np.any(weights):
                     Q, lines = add_quiver(ax, weights, verbose)
                     fig.canvas.draw()
+                    plt.pause(0.0005)
                     time.sleep(0.5)
 
         # If we haven't updated any weight in this data loop, success
@@ -216,8 +221,33 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
     # If the stop early condition never happened, failure
     return (False, weights)
 
+#Functions to execute the actions that individual threads need to take
+def rb_thread(alpha):
+    Pa = 0
+    for i in range(50):
+        P = int(alpha * N)
+        (result, weights) = run_rosenblatt(N=N, P = P, n_max=100)
+        Pa += int(result)
+    return (alpha, Pa/50)
+
 if __name__ == '__main__':
-    run_rosenblatt()
+    alpha = 0.75
+    N=20
+    Pls = []
+    # Make a set of alpha values so that they can be mapped to threads
+    alphaset = []
+    while alpha < 3:
+        alphaset.append(alpha)
+        alpha+= 0.1
+
+    # Determine the number of threads available
+    pool = mp.Pool(mp.cpu_count())
+    print("CPUs = " + str(mp.cpu_count()))
+    # Have each thread execute on a subset of the various alphas
+    output = pool.map(rb_thread, [a for a in alphaset])
+    pool.close()
+    print(output)
+
 
 
 
