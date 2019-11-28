@@ -222,31 +222,52 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
     return (False, weights)
 
 #Functions to execute the actions that individual threads need to take
-def rb_thread(alpha):
+def rb_thread(alpha, N):
+    #(alpha, N) = a
     Pa = 0
-    for i in range(50):
+    repetitions = 50
+    for i in range(repetitions):
         P = int(alpha * N)
         (result, weights) = run_rosenblatt(N=N, P = P, n_max=100)
         Pa += int(result)
-    return (alpha, Pa/50)
+    return Pa/repetitions
+
 
 if __name__ == '__main__':
-    alpha = 0.75
-    N=20
-    Pls = []
+
     # Make a set of alpha values so that they can be mapped to threads
-    alphaset = []
-    while alpha < 3:
-        alphaset.append(alpha)
-        alpha+= 0.1
+    alphaset = np.arange(0.75,3,0.25)
+    # Make a set of dimensions to explore the influence of different dimensions
+    #dimensions = [150, 20, 5]
+    dimensions = [20]
+    # Combine them
+    args = [(a, N) for N in dimensions for a in alphaset]
 
     # Determine the number of threads available
     pool = mp.Pool(mp.cpu_count())
     print("CPUs = " + str(mp.cpu_count()))
     # Have each thread execute on a subset of the various alphas
-    output = pool.map(rb_thread, [a for a in alphaset])
+    output = pool.starmap(rb_thread, args)
     pool.close()
-    print(output)
+
+
+    fig=plt.figure()
+    ax = fig.add_subplot(111)
+    colours = ["red", "orange", "green", "blue", "purple"]
+
+    for i in range(len(dimensions)):
+        ax.scatter(alphaset, output[len(alphaset) * (i):len(alphaset) * (i+1)], c=colours[i])
+        y = output[len(alphaset) * (i):len(alphaset) * (i+1)]
+        x = alphaset
+        z = np.polyfit(x, y, 10)
+        p = np.poly1d(z)
+        plt.plot(x, p(x), "r--", c=colours[i], label=dimensions[i])
+
+    plt.legend(title="Number of dimensions")
+    plt.title("Probability of linear separability for Data points/Dimension ratio")
+    plt.xlabel(r'$\alpha$ defined as the ratio of Data Points per Dimension')
+    plt.ylabel("Probability of being linearly seperable")
+    plt.show()
 
 
 
