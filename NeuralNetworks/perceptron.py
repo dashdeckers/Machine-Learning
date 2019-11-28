@@ -2,6 +2,8 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing as mp
+from itertools import groupby
+from operator import itemgetter
 
 class Vector:
     ''' A helper class to make easier to work with Vectors in
@@ -50,27 +52,6 @@ class Vector:
 
         return Vector((self.y, -self.x))
 
-def generate_data(P, N=2, mean=0, variance=1, labels='random'):
-    ''' Generates P randomly generated N-dimensional feature
-    vectors and corresponding labels.
-
-    The feature vector values are sampled from a Gaussian
-    distribution with mean and variance, and the binary
-    labels are either randomly selected from {-1, 1} with
-    an even distribution, or equal to the value of labels.
-    '''
-    mean = [mean] * N
-    covar = np.identity(N) * variance
-
-    data = np.random.multivariate_normal(mean, covar, P)
-
-    if labels == 'random':
-        labels = np.random.choice([-1, 1], P)
-    else:
-        labels = np.array([labels] * P)
-
-    return data, labels
-
 def add_quiver(ax, weights, verbose=False):
     ''' Add a Quiver showing the weight vector to the plot. Only
     works in 2D and not if the weight vector is a zero vector.
@@ -116,29 +97,80 @@ def add_quiver(ax, weights, verbose=False):
     )
     return Q, lines
 
-def make_plot(xi, labels, xlim=[-3, 3], ylim=[-3, 3]):
+def plot(xi, labels, verbose=False):
     ''' Creates a 2D plot with the (x, y) coordinates in xi, in two 
     different colors depending on the labels. The plot is interactive
     to allow for iterative updating.
     '''
-    assert xi.shape[1] == 2, 'Can only plot in 2D'
+    try:
+        assert xi.shape[1] == 2, 'Can only plot in 2D'
 
-    # Create a figure and plot the points
-    plt.ion()
-    fig = plt.figure()
-    ax  = fig.add_subplot(111)
-    x, y = xi.T
-    ax.scatter(x, y, c=labels)
-    fig.canvas.draw()
+        # Create a figure and plot the points
+        plt.ion()
+        fig = plt.figure()
+        ax  = fig.add_subplot(111)
+        x, y = xi.T
+        ax.scatter(x, y, c=labels)
+        fig.canvas.draw()
 
-    # Show the plot and return it
-    plt.axis('equal')
-    plt.show()
-    plt.pause(0.0005)
-    plt.xlim(*xlim)
-    plt.ylim(*ylim)
-    fig.canvas.draw()
-    return ax, fig, plt
+        # Prevent a messy tkinter error when manually closing the plot
+        global running
+        running = True
+        def handle_close(evt):
+            global running
+            running = False
+        fig.canvas.mpl_connect('close_event', handle_close)
+
+        # Show the plot and return it
+        plt.axis('equal')
+        plt.show()
+        plt.xlim(-3, 3)
+        plt.ylim(-3, 3)
+        fig.canvas.draw()
+
+        # Initialize perpendicular arrow and line
+        Q, lines = (None, None)
+
+        while running:
+            weights = yield
+
+            # If if there is a Quiver, remove it
+            if Q is not None and lines is not None:
+                Q.remove()
+                lines.pop(0).remove()
+
+            # If weights is not a zero vector, draw a Quiver
+            if np.any(weights):
+                Q, lines = add_quiver(ax, weights, verbose)
+                fig.canvas.draw()
+                plt.pause(0.0005)
+                time.sleep(0.5)
+
+    except AssertionError:
+        # If not 2D, become a bogus generator
+        while True:
+            _ = yield
+
+def generate_data(P, N=2, mean=0, variance=1, labels='random'):
+    ''' Generates P randomly generated N-dimensional feature
+    vectors and corresponding labels.
+
+    The feature vector values are sampled from a Gaussian
+    distribution with mean and variance, and the binary
+    labels are either randomly selected from {-1, 1} with
+    an even distribution, or equal to the value of labels.
+    '''
+    mean = [mean] * N
+    covar = np.identity(N) * variance
+
+    data = np.random.multivariate_normal(mean, covar, P)
+
+    if labels == 'random':
+        labels = np.random.choice([-1, 1], P)
+    else:
+        labels = np.array([labels] * P)
+
+    return data, labels
 
 def sign(x, theta=0):
     ''' The sign function:
@@ -156,9 +188,7 @@ def sign(x, theta=0):
     return res
 
 def response(w, xi, theta=0):
-    ''' The Error term E
-
-    E = ???
+    ''' The Response of the perceptron
     '''
     return sign(np.dot(w, xi), theta)
 
@@ -178,41 +208,27 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
     # Initialize Perceptron parameters
     weights = np.zeros(shape=(N,))
 
-    # Initialize plot data (only available in 2D)
-    if N == 2:
-        ax, fig, _ = make_plot(xi, labels)
-        Q, lines = (None, None)
+    # Initialize plotter, if applicable
+    plotter = plot(xi, labels)
+    next(plotter)
 
     # Epoch loop
     for epoch in range(n_max):
-        # Suppress prints for large testing banks
-        if(n_max < 10):
-            print(f'Epoch {epoch}/{n_max}')
-        stop_early = True
+        if verbose: print(f'Epoch {epoch}/{n_max}')
 
         # Data loop
+        stop_early = True
         for xi_t, label_t in zip(xi, labels):
             # Get the error
             E_t = response(weights, xi_t) * label_t
 
             # If condition, update weights and don't stop early        
             if E_t <= 0:
-                weights += (xi_t * label_t)/N
+                weights += (xi_t * label_t) / N
                 stop_early = False
 
-            # Only plot in 2D
-            if N == 2:
-                # If if there is a Quiver, remove it
-                if Q is not None and lines is not None:
-                    Q.remove()
-                    lines.pop(0).remove()
-
-                # If weights is not a zero vector, draw a Quiver
-                if np.any(weights):
-                    Q, lines = add_quiver(ax, weights, verbose)
-                    fig.canvas.draw()
-                    plt.pause(0.0005)
-                    time.sleep(0.5)
+            # Send the new weights to the plotter
+            plotter.send(weights)
 
         # If we haven't updated any weight in this data loop, success
         if stop_early:
@@ -221,90 +237,45 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
     # If the stop early condition never happened, failure
     return (False, weights)
 
-#Functions to execute the actions that individual threads need to take
-def rb_thread(alpha, N):
-    #(alpha, N) = a
+# Functions to execute the actions that individual threads need to take
+def run_experiment(alpha, N):
     Pa = 0
     repetitions = 50
     for i in range(repetitions):
         P = int(alpha * N)
-        (result, weights) = run_rosenblatt(N=N, P = P, n_max=100)
+        (result, weights) = run_rosenblatt(N=N, P=P, n_max=100)
         Pa += int(result)
-    return Pa/repetitions
 
+    return (N, alpha, Pa / repetitions)
 
-if __name__ == '__main__':
-
-    # Make a set of alpha values so that they can be mapped to threads
+def collect_data():
+    # Create the arguments to run
     alphaset = np.arange(0.75,3,0.25)
-    # Make a set of dimensions to explore the influence of different dimensions
-    #dimensions = [150, 20, 5]
-    dimensions = [20]
-    # Combine them
+    dimensions = [10, 20] # [150, 20, 5]
     args = [(a, N) for N in dimensions for a in alphaset]
 
     # Determine the number of threads available
     pool = mp.Pool(mp.cpu_count())
-    print("CPUs = " + str(mp.cpu_count()))
+    print(f'CPUs = {mp.cpu_count()}')
+
     # Have each thread execute on a subset of the various alphas
-    output = pool.starmap(rb_thread, args)
+    output = pool.starmap(run_experiment, args)
+    out_lists = [list(g) for _, g in groupby(output, itemgetter(0))]
+    print(out_lists)
     pool.close()
 
-
-    fig=plt.figure()
-    ax = fig.add_subplot(111)
+    # Plot results
     colours = ["red", "orange", "green", "blue", "purple"]
-
-    for i in range(len(dimensions)):
-        ax.scatter(alphaset, output[len(alphaset) * (i):len(alphaset) * (i+1)], c=colours[i])
-        y = output[len(alphaset) * (i):len(alphaset) * (i+1)]
-        x = alphaset
-        z = np.polyfit(x, y, 10)
-        p = np.poly1d(z)
-        plt.plot(x, p(x), "r--", c=colours[i], label=dimensions[i])
+    for colour, tup_list in zip(colours, out_lists):
+        prob_vals = [tup[2] for tup in tup_list]
+        plt.plot(alphaset, prob_vals, 'r--', c=colour, label=tup_list[0][0])
 
     plt.legend(title="Number of dimensions")
     plt.title("Probability of linear separability for Data points/Dimension ratio")
     plt.xlabel(r'$\alpha$ defined as the ratio of Data Points per Dimension')
-    plt.ylabel("Probability of being linearly seperable")
+    plt.ylabel("Probability of being linearly seperable (%)")
     plt.show()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Random irrelevant stuff
-
-def test_dataplot():
-    ''' Testing the new generate_data
-    '''
-    xi1, labels1 = generate_data(50, 2, mean=1, variance=1, labels=-1)
-    xi2, labels2 = generate_data(50, 2, mean=3, variance=1, labels=1)
-    ax, fig, plt = make_plot(xi1, labels1, xlim=[-2, 6], ylim=[-2, 6])
-
-    x2, y2 = xi2.T
-    ax.scatter(x2, y2, c='red')
-
-    return ax, fig, plt
-
-def get_solution(phi, y):
-    ''' The shortcut solution from the linear regression part of the
-    lecture notes.
-    '''
-    return np.dot(np.dot(np.linalg.inv(np.dot(phi.T, phi)), phi.T), y)
+if __name__ == '__main__':
+    # collect_data()
+    pass
