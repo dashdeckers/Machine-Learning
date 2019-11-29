@@ -151,62 +151,72 @@ def plot(xi, labels, verbose=False):
         while True:
             _ = yield
 
-def generate_data(P, N=2, mean=0, variance=1, labels='random'):
+def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
     ''' Generates P randomly generated N-dimensional feature
-    vectors and corresponding labels.
+    vectors and corresponding labels. Also generates the weight
+    vector, initialized to zeros.
 
     The feature vector values are sampled from a Gaussian
     distribution with mean and variance, and the binary
     labels are either randomly selected from {-1, 1} with
     an even distribution, or equal to the value of labels.
+
+    If clamped is set to True, then append -1 to each datapoint
+    and append 0 to the weight vector. This results in a final
+    dimension of N+1. This allows for inhomogeneous solutions
+    with an offset (in practice by increasing dimensionality).
     '''
     mean = [mean] * N
     covar = np.identity(N) * variance
 
     data = np.random.multivariate_normal(mean, covar, P)
+    weights = np.zeros(shape=(N,))
 
+    # Randomly assign labels, or assign them all the value of labels
     if labels == 'random':
         labels = np.random.choice([-1, 1], P)
     else:
         labels = np.array([labels] * P)
 
-    return data, labels
+    # Clamp the generated data to add a degree of freedom
+    if clamped:
+        # Add a column vector of -1's to the data
+        clamped_col_vec = np.array([-1] * P).reshape(-1, 1)
+        data = np.concatenate((data, clamped_col_vec), axis=1)
+        # Add a theta value to the weights
+        weights = np.append(weights, [0])
 
-def sign(x, theta=0):
-    ''' The sign function:
-
-    sign(x - theta) = {
-            +1 for x >= theta
-            -1 for x <  theta
-    }
-
-    Guaranteed to return a numpy array
-    '''
-    res = np.array(np.sign(np.array(x) - theta))
-    # np.sign(0) == 0, correct for this
-    res[res == 0] = 1
-    return res
+    return data, labels, weights
 
 def response(w, xi, theta=0):
-    ''' The Response of the perceptron
-    '''
-    return sign(np.dot(w, xi), theta)
+    ''' The Response of the perceptron.
 
-def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
+    S_w(xi) = {
+        +1 if dot(w, xi) >= theta,
+        -1 if dot(w, xi) <  theta
+    }
+
+    The points given by xi are linearly separated by
+    the hyperplane given by dot(w, xi) - theta.
+    '''
+    response = np.sign(np.dot(w, xi) - theta)
+    # np.sign(0) == 0, but we want response=1 in this case
+    if response == 0:
+        return 1
+    else:
+        return response
+
+def run_rosenblatt(N=2, P=5, n_max=5, clamped=True, verbose=False):
     ''' Rosenblatt learning algorithm, where:
 
     N is the number of dimensions
     P is the number of datapoints
     n_max is the number of Epochs to run for
 
-    if verbose is set to True, it will print more than
-    just the Epoch progress.
+    if verbose is set to True, it will print stuff.
     '''
-    # Generate data and plot
-    xi, labels = generate_data(P, N)
-
-    # Initialize Perceptron parameters
-    weights = np.zeros(shape=(N,))
+    # Generate data and weights
+    xi, labels, weights = generate_data(P, N, clamped=clamped)
 
     # Initialize plotter, if applicable
     plotter = plot(xi, labels)
@@ -219,11 +229,12 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
         # Data loop
         stop_early = True
         for xi_t, label_t in zip(xi, labels):
-            # Get the error
+            # Get the error via Hebbian learning:
+            # If response == label: Error = 1, else Error = -1
             E_t = response(weights, xi_t) * label_t
 
-            # If condition, update weights and don't stop early        
-            if E_t <= 0:
+            # If Error == -1, update weights and don't stop early
+            if E_t == -1:
                 weights += (xi_t * label_t) / N
                 stop_early = False
 
@@ -238,21 +249,21 @@ def run_rosenblatt(N=2, P=5, n_max=5, verbose=False):
     return (False, weights)
 
 # Functions to execute the actions that individual threads need to take
-def run_experiment(alpha, N):
+def run_experiment(alpha, N, clamped):
     Pa = 0
     repetitions = 50
     for i in range(repetitions):
         P = int(alpha * N)
-        (result, weights) = run_rosenblatt(N=N, P=P, n_max=100)
+        result, _ = run_rosenblatt(N=N, P=P, n_max=100, clamped=clamped)
         Pa += int(result)
 
     return (N, alpha, Pa / repetitions)
 
-def collect_data():
+def collect_data(clamped=False):
     # Create the arguments to run
     alphaset = np.arange(0.75,3,0.25)
-    dimensions = [10, 20] # [150, 20, 5]
-    args = [(a, N) for N in dimensions for a in alphaset]
+    dimensions = [5, 20] # [150, 20, 5]
+    args = [(a, N, clamped) for N in dimensions for a in alphaset]
 
     # Determine the number of threads available
     pool = mp.Pool(mp.cpu_count())
