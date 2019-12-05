@@ -276,6 +276,7 @@ def collect_data(clamped=False):
     pool.close()
 
     # Plot results
+    plt.ion()
     colours = ["red", "orange", "green", "blue", "purple"]
     for colour, tup_list in zip(colours, out_lists):
         prob_vals = [tup[2] for tup in tup_list]

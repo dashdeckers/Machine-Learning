@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 import time
+from sklearn.model_selection import train_test_split
 
 def show_digit(digit):
 	''' Show the digit as an image
@@ -85,10 +87,22 @@ if __name__ == '__main__':
 	t0 = time.time()
 
 	# Step 0: Load and preprocess Data
-	(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+	#(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+	f = open("mfeat-pix.txt", 'r')
+	X = f.readlines()
+	Y = []
+
+	#Probably horribly inefficient, perhaps Travis knows how to do this with Python magic
+	#Create an array as [0,0,0, ... ,1,1,1, ..., 2,2,2,2..., 9,9,9]
+	for i in range(0,10):
+	    for j in range(0,200):
+	        Y.append(i)
+	df = pd.DataFrame(X)
+	x_train, x_test, y_train, y_test = train_test_split(df, Y, test_size=0.1)
 	x_centered = center_data(reshape_image_data(x_train))
 	print(f'Loaded and preprocessed data ({time.time() - t0})')
- 
+
 	# Step 1: PCA
 	m = 30
 	Um = compute_first_m_PCs_of_x(x_centered, m)
