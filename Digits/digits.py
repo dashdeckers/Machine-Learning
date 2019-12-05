@@ -38,6 +38,8 @@ def reshape_image_data(x, shape='channels_first'):
 		x.shape == (img_dim1 * img_dim2, n_imgs).
 
 	'''
+
+
 	assert x.ndim == 3, (x, x.shape)
 	assert shape in ['channels_first', 'channels_last'], shape
 
@@ -88,9 +90,8 @@ if __name__ == '__main__':
 
 	# Step 0: Load and preprocess Data
 	#(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-
-	f = open("mfeat-pix.txt", 'r')
-	X = f.readlines()
+	with open('mfeat-pix.txt') as f:
+	    X = [[int(x) for x in line.split()] for line in f]
 	Y = []
 
 	#Probably horribly inefficient, perhaps Travis knows how to do this with Python magic
@@ -98,9 +99,9 @@ if __name__ == '__main__':
 	for i in range(0,10):
 	    for j in range(0,200):
 	        Y.append(i)
-	df = pd.DataFrame(X)
+	df = pd.DataFrame(X, Y)
 	x_train, x_test, y_train, y_test = train_test_split(df, Y, test_size=0.1)
-	x_centered = center_data(reshape_image_data(x_train))
+	x_centered = center_data(x_train)
 	print(f'Loaded and preprocessed data ({time.time() - t0})')
 
 	# Step 1: PCA
