@@ -12,6 +12,7 @@ def show_digit(digit, col_vector=False):
 
         digit = data[:,0]
         show_digit(digit, col_vector=True)
+
     '''
     if col_vector:
         assert digit.ndim == 1, (digit, digit.shape)
@@ -25,20 +26,29 @@ def show_digit(digit, col_vector=False):
     plt.show()
 
 def load_data(filename='mfeat-pix.txt'):
+    ''' Loads the 'Project Digits' dataset from file and splits it into
+    test and train as per the project instructions. Also creates the array
+    of labels.
+
+    Both test and training data will have 1000 examples, 100 of each class.
+    Each example consists of a 240 dimensional column vector, representing
+    a 16x15 dimensional image, and a a single integer representing the label.
+
+    '''
     with open(filename, 'r') as datafile:
         # Load the transposed datafile to get each image in a col vector
-        data = np.loadtxt(datafile).T # shape == (240, 2000)
+        data = np.loadtxt(datafile).T # (240, 2000)
 
         # Create an array of labels (each 200 elements is a digit)
         labels = np.zeros(data.shape[1], dtype=np.int)
         for digit in range(10):
-            labels[digit * 200: (digit+1) * 200] = digit # shape == (2000,)
+            labels[digit * 200: (digit+1) * 200] = digit # (2000,)
 
         # Split the data into train and test by first determining the indices
         even = np.array([np.arange(i*100, (i+1)*100) for i in range(0,20,2)])
         odd  = np.array([np.arange(i*100, (i+1)*100) for i in range(1,20,2)])
         even = even.reshape(-1) # reshape to get a single,
-        odd  = odd.reshape(-1)  # long array of indices
+        odd  = odd.reshape(-1)  # long array of indices: (1000, )
 
         # And then selecting via the array of indices
         x_train, y_train = data[:, even], labels[even]
@@ -47,14 +57,27 @@ def load_data(filename='mfeat-pix.txt'):
         return (x_train, y_train), (x_test, y_test)
 
 def preprocess_data(data, subtract_mean=False):
+    ''' Preprocess the data from load_data by normalizing the values to the
+    range [0,1] and centering the data by subtracting the mean.
+
+    Centering the data actually decreases performance.. lowest MSE_train ~ -0.5
+
+    '''
     (x_train, y_train), (x_test, y_test) = data
 
     # Normalize the data to range [0,1] (assuming range [0,6])
     x_train /= 6
     x_test /= 6
-    # Center the data by subtracting the mean (not really helping)
+
+    assert np.max(x_train) <= 1, np.max(x_train)
+    assert np.max(x_test) <= 1, np.max(x_test)
+    assert np.min(x_train) >= 0, np.min(x_train)
+    assert np.min(x_test) >= 0, np.min(x_test)
+
+    # Center the data by subtracting the mean
     if subtract_mean:
-        mean = x_train.mean(axis=1).reshape(-1, 1)
+        mean = x_train.mean(axis=1).reshape(-1, 1) # (240, 1) (=column vector)
+        assert mean.shape == (240, 1)
         x_train -= mean
         x_test -= mean
 
@@ -63,7 +86,7 @@ def preprocess_data(data, subtract_mean=False):
 def compute_first_m_PCs_of_x(x, m):
     ''' Compute the first m principle components of the dataset matrix x.
 
-        U.shape == (img_dim1 * img_dim2, m)
+        Um.shape == (240, m)
 
     '''
     # Compute covariance matrix
@@ -73,19 +96,19 @@ def compute_first_m_PCs_of_x(x, m):
     # Return the first m columns of U
     return U[:, :m]
 
-def one_hot_encode_labels(labels, n_possible_vals=10):
+def one_hot_encode_labels(labels):
     ''' Returns a matrix of one-hot encoded vectors for the given array
     of values. Assumes that the labels in y correspond to the indices in
-    [0, n_possible_vals) that should be set to 1 in the resulting matrix.
+    [0, 9] that should be set to 1 in the resulting matrix.
 
-        label_matrix.shape == (n_possible_vals, n_labels)
+        label_matrix.shape == (10, n_labels)
 
     '''
     assert labels.ndim == 1, (labels, labels.shape)
 
     N = len(labels)
     # Create a matrix of zeros
-    label_matrix = np.zeros(shape=(n_possible_vals, N))
+    label_matrix = np.zeros(shape=(10, N))
     # Entries with (row, col) == (label, c_index) should equal 1
     label_matrix[labels, range(N)] = 1
 
@@ -165,6 +188,7 @@ if __name__ == '__main__':
 
     '''
     Results show the correct behaviour of MSE(train) but with worse total
-    performance. The error reaches just under -0.6, which is nowhere near
-    the -1.5 from the lecture notes. Also no jitter?
+    performance. The error reaches just under -0.65, which is nowhere near
+    the -1.5 from the lecture notes. Also no jitter? Also if you turn on the
+    centering in preprocess_data() the error only reaches -0.5?
     '''
