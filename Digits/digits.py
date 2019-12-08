@@ -29,16 +29,34 @@ def one_hot_encode_labels(labels, n_possible_vals=10):
 
 	return label_matrix
 
-def center_data(x):
-	''' Compute the centered dataset by subtracting the column-wise mean
-	from each columm vector in the matrix. 
+def load_data(filename='mfeat-pix.txt', preprocess=True):
 
-	Assuming each column represents an image.
-	'''
-	assert x.ndim == 2, (x, x.shape)
+	with open(filename, 'r') as datafile:
+		# Load the transposed datafile to get each image in a col vector
+		data = np.loadtxt(datafile).T # shape == (240, 2000)
 
-	# Assuming the format (img_dim1 * img_dim2, n_imgs)
-	return x - x.mean(axis=1).reshape(-1, 1)
+		# Create an array of labels (each 200 elements is a digit)
+		labels = np.zeros(data.shape[1], dtype=np.int)
+		for digit in range(10):
+			labels[digit * 200: (digit+1) * 200] = digit # shape == (2000,)
+
+		if preprocess:
+			# Normalize the data to range [0,1] (assuming range [0,6])
+			data /= 6
+			# Center the data by subtracting the mean (not really helping)
+			# data -= data.mean(axis=1).reshape(-1, 1)
+
+		# Split the data into train and test by first determining the indices
+		even = np.array([np.arange(i*100, (i+1)*100) for i in range(0,20,2)])
+		odd  = np.array([np.arange(i*100, (i+1)*100) for i in range(1,20,2)])
+		even = even.reshape(-1) # reshape to get a single,
+		odd  = odd.reshape(-1)  # long array of indices
+
+		# And then selecting via the array of indices
+		x_train, y_train = data[:, even], labels[even]
+		x_test,  y_test  = data[:, odd],  labels[odd]
+
+		return (x_train, y_train), (x_test, y_test)
 
 def compute_first_m_PCs_of_x(x, m):
 	''' Compute the first m principle components of the dataset matrix x.
@@ -60,17 +78,6 @@ def compute_MSE(V, F, W):
 
 	'''
 	diff = (V - np.dot(W, F)) # (10, 60000)
-
-	# summer = 0
-	# for i in range(2000):
-	# 	diff = V[:,i] - np.dot(W, F[:,i])
-	# 	norm = np.sqrt( (diff**2).sum() )
-	# 	summer += norm
-	# summer /= 2000
-	# return summer
-
-	# return np.mean( (V - np.dot(W, F))**2, axis=0 )
-
 	normed = np.sqrt(np.square(diff).sum(axis=0)) # (60000, )
 	return np.square(normed).sum() / len(normed)
 
@@ -78,28 +85,19 @@ if __name__ == '__main__':
 	t0 = time.time()
 
 	# Step 0: Load and preprocess Data
-	with open('mfeat-pix.txt', 'r') as datafile:
-		# Load the datafile into numpy matrix
-		data = np.loadtxt(datafile).T
-		# Create an array of labels (each 200 elements is a digit)
-		labels = np.zeros(data.shape[1], dtype=np.int)
-		for digit in range(10):
-			labels[digit * 200: (digit+1) * 200] = digit
-		# Center the data
-		centered = center_data(data)
-
+	(x_train, y_train), (x_test, y_test) = load_data()
 	print(f'Loaded and preprocessed data ({time.time() - t0})')
 
-	for m in [2, 20, 30, 40, 50]:
+	for m in [2, 20, 30, 40, 50, 100, 200]:
 		print(f'Setting m={m}:')
 
 		# Step 1: PCA
-		Um = compute_first_m_PCs_of_x(centered, m)
-		F = np.dot(Um.T, centered)
+		Um = compute_first_m_PCs_of_x(x_train, m)
+		F = np.dot(Um.T, x_train)
 		print(f'Computed PCA feature vectors ({time.time() - t0})')
 
 		# Step 2: One-Hot Encode Labels
-		V = one_hot_encode_labels(labels)
+		V = one_hot_encode_labels(y_train)
 		print(f'One-Hot encoded labels ({time.time() - t0})')
 
 		# Step 3: Compute LG Classifier
