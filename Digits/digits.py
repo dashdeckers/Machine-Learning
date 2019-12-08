@@ -85,14 +85,16 @@ def compute_first_m_PCs_of_x(x, m):
 	return U[:, :m]
 
 def compute_MSE(V, F, W):
-	''' Compute the MSE
+	''' Compute the MSE.
 
-	Still working on this.
+	Across all vectors, subtract W*F from V, then find the euclidean norm
+	and finally sum the squares and divide by the number of elements.
+	(I hope I understood the equation correctly)
 
 	'''
-	diff = (V - np.dot(W, F)) # (10, 60000)
-	normed = np.sqrt(np.square(diff).sum(axis=0)) # (60000, )
-	return np.square(normed).sum() / len(normed)
+	diff = (V - np.dot(W, F)) # (10, 1000)
+	normed = np.sqrt(np.square(diff).sum(axis=0)) # (1000, )
+	return np.square(normed).sum() / len(normed) # (1, )
 
 if __name__ == '__main__':
 	t0 = time.time()
@@ -101,7 +103,10 @@ if __name__ == '__main__':
 	(x_train, y_train), (x_test, y_test) = load_data()
 	print(f'Loaded and preprocessed data ({time.time() - t0})')
 
-	for m in [2, 20, 30, 40, 50, 100, 200]:
+	res_vals = list()
+	m_vals = list(range(1, 240)) # [2, 20, 30, 40, 50, 100, 200]
+
+	for m in m_vals:
 		print(f'Setting m={m}:')
 
 		# Step 1: PCA
@@ -119,5 +124,19 @@ if __name__ == '__main__':
 
 		# Step 4: Compute the Error
 		MSE_train = compute_MSE(V, F, W)
+		res_vals.append(np.log10(MSE_train))
 		print(f'Computed the Error ({time.time() - t0})')
-		print(f'\tError (for m={m}): {np.log10(MSE_train)}\n')
+		print(f'\tError (for m={m}): {res_vals[-1]}\n')
+
+	# Step 5: Plot the results
+	plt.plot(m_vals, res_vals)
+	plt.xlabel('m')
+	plt.ylabel('MSE (log10)')
+	plt.title('MSE (train) vs chosen m')
+	plt.show()
+
+	'''
+	Results show the correct behaviour of MSE(train) but with worse total
+	performance. The error reaches just under -0.6, which is nowhere near
+	the -1.5 from the lecture notes. Also no jitter?
+	'''
