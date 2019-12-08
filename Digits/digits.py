@@ -25,6 +25,33 @@ def show_digit(digit, col_vector=False):
     plt.imshow(digit, cmap='Greys')
     plt.show()
 
+def try_it_out(W, Um, digit):
+    ''' Visually / Manually try out the classifier.
+
+    W is the classifier itself that can make a prediction given a feature vector
+    Um is the feature 'mapper' that can reduce the dimensionality of raw input
+    digit is the raw input (as a column vector) of a digit
+
+    Usage:
+        ...
+        # Keep a decent classifier + feature mapping to try out later
+        if m == 30:
+            W_keep = W
+            Um_keep = Um
+        ...
+
+        digit = x_test[:, arbitrary_index]
+        try_it_out(W_keep, Um_keep, digit)
+
+    '''
+    # Reduce dimensionality of the digit (=get feature vector for digit)
+    f_digit = np.dot(Um.T, digit)
+    # Make prediction on the feature vector (=get probability vector)
+    pred = np.dot(W, f_digit)
+    # Print best guess and show the digit
+    print(f'Best guess: {np.argmax(pred)}')
+    show_digit(digit, col_vector=True)
+
 def load_data(filename='mfeat-pix.txt'):
     ''' Loads the 'Project Digits' dataset from file and splits it into
     test and train as per the project instructions. Also creates the array
