@@ -156,16 +156,37 @@ def compute_LR_classifier(F, V):
     return W_transp.T                   # W'
 
 def compute_MSE(V, F, W):
-    ''' Compute the MSE.
+    ''' Compute the Mean Squared Error.
 
-    Across all vectors, subtract W*F from V, then find the euclidean norm
-    and finally sum the squares and divide by the number of elements.
-    (I hope I understood the equation correctly)
+    Find the difference between predictions (=W*F) and label-vectors, square
+    the result to avoid negative values, then find the mean squared error for
+    each example. Finally, sum these means and divide by n_examples.
 
     '''
-    diff = (V - np.dot(W, F)) # (10, 1000)
-    normed = np.sqrt(np.square(diff).sum(axis=0)) # (1000, )
-    return np.square(normed).sum() / len(normed) # (1, )
+    n_examples = V.shape[1]
+    squared_error = np.square(V - np.dot(W, F)) # (10, 1000)
+    mean_squared_error = squared_error.mean(axis=0) # (1000, )
+    return mean_squared_error.sum() / n_examples # (float)
+
+def compute_MR(V, F, W):
+    ''' Compute the Misclassification Rate.
+
+    Calculate all prediction vectors, then find the argmax of each vector to
+    get an array containing the best guesses for each example in F.
+
+    Similarly, find the argmax of each one-hot encoded label vector in V to get
+    an array containing all the true answers for each example in F.
+
+    Then, count the number of times the answer was incorrect and divide by
+    n_examples.
+
+    '''
+    n_examples = V.shape[1]
+
+    pred = np.dot(W, F) # (10, n_examples)
+    best = np.argmax(pred, axis=0) # (n_examples, )
+    true = np.argmax(V, axis=0) # (n_examples, )
+    return (n_examples - np.count_nonzero(true==best)) / n_examples
 
 if __name__ == '__main__':
     t0 = time.time()
@@ -176,7 +197,9 @@ if __name__ == '__main__':
 
     MSE_train_vals = list()
     MSE_test_vals  = list()
-    m_vals = list(range(1, 240)) # [2, 20, 30, 40, 50, 100, 200]
+    MR_train_vals  = list()
+    MR_test_vals   = list()
+    m_vals = list(range(241))
 
     for m in m_vals:
         print(f'Setting m={m}:')
@@ -196,26 +219,22 @@ if __name__ == '__main__':
         W = compute_LR_classifier(F_train, V_train)
         print(f'Computed linear regression weight matrix ({time.time() - t0})')
 
-        # Step 4: Compute the Error
-        MSE_train = compute_MSE(V_train, F_train, W)
-        MSE_test  = compute_MSE(V_test, F_test, W)
-        MSE_train_vals.append(np.log10(MSE_train))
-        MSE_test_vals.append(np.log10(MSE_test))
-        print(f'Computed the Error ({time.time() - t0})')
-        print(f'\tError (for m={m}): {MSE_train_vals[-1]}\n')
+        # Step 4: Compute the Errors
+        MSE_train_vals.append(np.log10(compute_MSE(V_train, F_train, W)))
+        MSE_test_vals.append(np.log10(compute_MSE(V_test, F_test, W)))
+        MR_train_vals.append(np.log10(compute_MR(V_train, F_train, W)))
+        MR_test_vals.append(np.log10(compute_MR(V_test, F_test, W)))
+
+        print(f'Computed the Errors ({time.time() - t0})')
+        print(f'\tMSE_train error (for m={m}): {MSE_train_vals[-1]}\n')
 
     # Step 5: Plot the results
-    plt.plot(m_vals, MSE_train_vals, c='blue', label='MSE_train')
-    plt.plot(m_vals, MSE_test_vals, c='red', label='MSE_test')
+    plt.plot(m_vals, MSE_train_vals, c='blue', linestyle='--', label='MSE_train')
+    plt.plot(m_vals, MSE_test_vals, c='red', linestyle='--', label='MSE_test')
+    plt.plot(m_vals, MR_train_vals, c='blue', linestyle='-', label='MR_train')
+    plt.plot(m_vals, MR_test_vals, c='red', linestyle='-', label='MR_test')
     plt.xlabel('m')
-    plt.ylabel('MSE (log10)')
-    plt.title('MSE vs chosen m')
+    plt.ylabel('MSE/MR (log10)')
+    plt.title('MSE/MR vs chosen m')
     plt.legend()
     plt.show()
-
-    '''
-    Results show the correct behaviour of MSE(train) but with worse total
-    performance. The error reaches just under -0.65, which is nowhere near
-    the -1.5 from the lecture notes. Also no jitter? Also if you turn on the
-    centering in preprocess_data() the error only reaches -0.5?
-    '''
