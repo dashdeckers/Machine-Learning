@@ -2,11 +2,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-def show_digit(digit):
-	''' Show the digit as an image
+def show_digit(digit, col_vector=False):
+	''' Show the digit as an image.
+
+	Usage:
+		digit = data[:,0] # get column vector
+		digit = digit.reshape(16, 15) # resize into 2D
+		show_digit(digit)
+
+		digit = data[:,0]
+		show_digit(digit, col_vector=True)
 	'''
-	assert digit.ndim == 2, (digit, digit.shape)
-	assert digit.shape == (16, 15), (digit, digit.shape)
+	if col_vector:
+		assert digit.ndim == 1, (digit, digit.shape)
+		assert digit.shape == (240,), (digit, digit.shape)
+		digit = digit.reshape(16, 15)
+	else:
+		assert digit.ndim == 2, (digit, digit.shape)
+		assert digit.shape == (16, 15), (digit, digit.shape)
 
 	plt.imshow(digit, cmap='Greys')
 	plt.show()
