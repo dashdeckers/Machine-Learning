@@ -86,58 +86,68 @@ def compute_LR_classifier(F, V):
 	return U[:, :m]
 
 def compute_MSE(V, F, W):
-	''' Compute the MSE.
+    ''' Compute the MSE.
 
-	Across all vectors, subtract W*F from V, then find the euclidean norm
-	and finally sum the squares and divide by the number of elements.
-	(I hope I understood the equation correctly)
+    Across all vectors, subtract W*F from V, then find the euclidean norm
+    and finally sum the squares and divide by the number of elements.
+    (I hope I understood the equation correctly)
 
-	'''
-	diff = (V - np.dot(W, F)) # (10, 1000)
-	normed = np.sqrt(np.square(diff).sum(axis=0)) # (1000, )
-	return np.square(normed).sum() / len(normed) # (1, )
+    '''
+    diff = (V - np.dot(W, F)) # (10, 1000)
+    normed = np.sqrt(np.square(diff).sum(axis=0)) # (1000, )
+    return np.square(normed).sum() / len(normed) # (1, )
 
 if __name__ == '__main__':
-	t0 = time.time()
+    t0 = time.time()
 
-	# Step 0: Load and preprocess Data
-	(x_train, y_train), (x_test, y_test) = load_data()
-	print(f'Loaded and preprocessed data ({time.time() - t0})')
+    # Step 0: Load and preprocess Data
+    (x_train, y_train), (x_test, y_test) = preprocess_data(load_data())
+    print(f'Loaded and preprocessed data ({time.time() - t0})')
 
-	res_vals = list()
-	m_vals = list(range(1, 240)) # [2, 20, 30, 40, 50, 100, 200]
+    MSE_train_vals = list()
+    MSE_test_vals  = list()
+    m_vals = list(range(1, 240)) # [2, 20, 30, 40, 50, 100, 200]
 
-	for m in m_vals:
-		print(f'Setting m={m}:')
+    for m in m_vals:
+        print(f'Setting m={m}:')
 
-		# Step 1: PCA
-		Um = compute_first_m_PCs_of_x(x_train, m)
-		F = np.dot(Um.T, x_train)
-		print(f'Computed PCA feature vectors ({time.time() - t0})')
+        # Step 1: PCA
+        Um = compute_first_m_PCs_of_x(x_train, m)
+        F_train = np.dot(Um.T, x_train)
+        F_test  = np.dot(Um.T, x_test)
+        print(f'Computed PCA feature vectors ({time.time() - t0})')
 
-		# Step 2: One-Hot Encode Labels
-		V = one_hot_encode_labels(y_train)
-		print(f'One-Hot encoded labels ({time.time() - t0})')
+        # Step 2: One-Hot Encode Labels
+        V_train = one_hot_encode_labels(y_train)
+        V_test  = one_hot_encode_labels(y_test)
+        print(f'One-Hot encoded labels ({time.time() - t0})')
 
 		# Step 3: Compute LG Classifier
 		W = np.dot(np.dot(np.linalg.inv(np.dot(F, F.T)), F), V.T).T
 		print(f'Computed linear regression weight matrix ({time.time() - t0})')
         # Step 3: Compute LR Classifier
         W = compute_LR_classifier(F_train, V_train)
-		MSE_train = compute_MSE(V, F, W)
-		res_vals.append(np.log10(MSE_train))
-		print(f'Computed the Error ({time.time() - t0})')
-		print(f'\tError (for m={m}): {res_vals[-1]}\n')
+        print(f'Computed linear regression weight matrix ({time.time() - t0})')
 
-	# Step 5: Plot the results
-	plt.plot(m_vals, res_vals)
-	plt.xlabel('m')
-	plt.ylabel('MSE (log10)')
-	plt.title('MSE (train) vs chosen m')
-	plt.show()
+        # Step 4: Compute the Error
+        MSE_train = compute_MSE(V_train, F_train, W)
+        MSE_test  = compute_MSE(V_test, F_test, W)
+        MSE_train_vals.append(np.log10(MSE_train))
+        MSE_test_vals.append(np.log10(MSE_test))
+        print(f'Computed the Error ({time.time() - t0})')
+        print(f'\tError (for m={m}): {MSE_train_vals[-1]}\n')
 
-	'''
-	Results show the correct behaviour of MSE(train) but with worse total
-	performance. The error reaches just under -0.6, which is nowhere near
-	the -1.5 from the lecture notes. Also no jitter?
-	'''
+    # Step 5: Plot the results
+    plt.plot(m_vals, MSE_train_vals, c='blue', label='MSE_train')
+    plt.plot(m_vals, MSE_test_vals, c='red', label='MSE_test')
+    plt.xlabel('m')
+    plt.ylabel('MSE (log10)')
+    plt.title('MSE vs chosen m')
+    plt.legend()
+    plt.show()
+
+    '''
+    Results show the correct behaviour of MSE(train) but with worse total
+    performance. The error reaches just under -0.6, which is nowhere near
+    the -1.5 from the lecture notes. Also no jitter?
+    '''
