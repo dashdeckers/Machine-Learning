@@ -65,18 +65,19 @@ def load_data(filename='mfeat-pix.txt', preprocess=True):
 		even = even.reshape(-1) # reshape to get a single,
 		odd  = odd.reshape(-1)  # long array of indices
 
-		# And then selecting via the array of indices
-		x_train, y_train = data[:, even], labels[even]
-		x_test,  y_test  = data[:, odd],  labels[odd]
+def compute_LR_classifier(F, V):
+    ''' Compute the Linear Regression classifier according to:
 
-		return (x_train, y_train), (x_test, y_test)
+        W' = (F F')^-1 F V'
 
-def compute_first_m_PCs_of_x(x, m):
-	''' Compute the first m principle components of the dataset matrix x.
+    '''
+    F_Fprime = np.dot(F, F.T)           # F*F'
+    F_Fp_inv = np.linalg.inv(F_Fprime)  # (F*F')^-1
 
-		U.shape == (img_dim1 * img_dim2, m)
+    Triple_F = np.dot(F_Fp_inv, F)      # (F*F')^-1 * F
+    W_transp = np.dot(Triple_F, V.T)    # (F*F')^-1 * F * V'
 
-	'''
+    return W_transp.T                   # W'
 	# Compute covariance matrix
 	C = np.cov(x)
 	# Get the SVD of C
@@ -121,8 +122,8 @@ if __name__ == '__main__':
 		# Step 3: Compute LG Classifier
 		W = np.dot(np.dot(np.linalg.inv(np.dot(F, F.T)), F), V.T).T
 		print(f'Computed linear regression weight matrix ({time.time() - t0})')
-
-		# Step 4: Compute the Error
+        # Step 3: Compute LR Classifier
+        W = compute_LR_classifier(F_train, V_train)
 		MSE_train = compute_MSE(V, F, W)
 		res_vals.append(np.log10(MSE_train))
 		print(f'Computed the Error ({time.time() - t0})')
