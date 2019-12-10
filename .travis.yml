@@ -9,8 +9,9 @@ cache:
 
 install:
   - pip install -r Digits/requirements.txt
-  - pip install mypy flake8
+  - pip install mypy flake8 pydocstyle
 
 script:
   - mypy Digits/digits.py NeuralNetworks/perceptron.py
   - flake8 Digits/digits.py NeuralNetworks/perceptron.py
+  - pydocstyle Digits/digits.py NeuralNetworks/perceptron.py

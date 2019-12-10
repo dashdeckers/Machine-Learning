@@ -1,3 +1,5 @@
+"""A Rosenblatt Perceptron and means of visualizing its behaviour."""
+
 import multiprocessing as mp
 import time
 from itertools import groupby
@@ -8,9 +10,12 @@ import numpy as np
 
 
 class Vector:
-    ''' A helper class to make easier to work with Vectors in
+    """Vector Class.
+
+    A helper class to make easier to work with Vectors in
     future projects. Can be generalized to more dimensions.
-    '''
+    """
+
     def __init__(self, coords):
         self.coords = np.array(coords)
         # Set x and y for convenience in 2D
@@ -56,12 +61,14 @@ class Vector:
 
 
 def add_quiver(ax, weights, verbose=False):
-    ''' Add a Quiver showing the weight vector to the plot. Only
+    """Add quiver to plot.
+
+    Add a Quiver showing the weight vector to the plot. Only
     works in 2D and not if the weight vector is a zero vector.
 
     Also adds a line perpendicular to the weight vector, which
     goes through the origin.
-    '''
+    """
     assert len(weights) == 2, 'Weights must be 2D'
     assert np.any(weights), 'Weights cannot be zero vector'
 
@@ -102,10 +109,12 @@ def add_quiver(ax, weights, verbose=False):
 
 
 def plot(xi, labels, verbose=False):
-    ''' Creates a 2D plot with the (x, y) coordinates in xi, in two
+    """Create the plot.
+
+    Creates a 2D plot with the (x, y) coordinates in xi, in two
     different colors depending on the labels. The plot is interactive
     to allow for iterative updating.
-    '''
+    """
     try:
         assert xi.shape[1] == 2, 'Can only plot in 2D'
 
@@ -159,7 +168,9 @@ def plot(xi, labels, verbose=False):
 
 
 def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
-    ''' Generates P randomly generated N-dimensional feature
+    """Generate the data.
+
+    Generates P randomly generated N-dimensional feature
     vectors and corresponding labels. Also generates the weight
     vector, initialized to zeros.
 
@@ -172,7 +183,7 @@ def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
     and append 0 to the weight vector. This results in a final
     dimension of N+1. This allows for inhomogeneous solutions
     with an offset (in practice by increasing dimensionality).
-    '''
+    """
     mean = [mean] * N
     covar = np.identity(N) * variance
 
@@ -197,7 +208,7 @@ def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
 
 
 def response(w, xi, theta=0):
-    ''' The Response of the perceptron.
+    """Compute the Response of the perceptron.
 
     S_w(xi) = {
         +1 if dot(w, xi) >= theta,
@@ -206,7 +217,7 @@ def response(w, xi, theta=0):
 
     The points given by xi are linearly separated by
     the hyperplane given by dot(w, xi) - theta.
-    '''
+    """
     response = np.sign(np.dot(w, xi) - theta)
     # np.sign(0) == 0, but we want response=1 in this case
     if response == 0:
@@ -216,14 +227,14 @@ def response(w, xi, theta=0):
 
 
 def run_rosenblatt(N=2, P=5, n_max=5, clamped=True, verbose=False):
-    ''' Rosenblatt learning algorithm, where:
+    """Rosenblatt learning algorithm.
 
     N is the number of dimensions
     P is the number of datapoints
     n_max is the number of Epochs to run for
 
     if verbose is set to True, it will print stuff.
-    '''
+    """
     # Generate data and weights
     xi, labels, weights = generate_data(P, N, clamped=clamped)
 

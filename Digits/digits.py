@@ -1,3 +1,5 @@
+"""A Linear Regression baseline algorithm for predicting handwritten digits."""
+
 import time
 
 import matplotlib.pyplot as plt
@@ -5,7 +7,7 @@ import numpy as np
 
 
 def show_digit(digit, col_vector=False):
-    ''' Show the digit as an image.
+    """Show the digit as an image.
 
     Usage:
         digit = data[:,0] # get column vector
@@ -15,7 +17,7 @@ def show_digit(digit, col_vector=False):
         digit = data[:,0]
         show_digit(digit, col_vector=True)
 
-    '''
+    """
     if col_vector:
         assert digit.ndim == 1, (digit, digit.shape)
         assert digit.shape == (240,), (digit, digit.shape)
@@ -29,7 +31,7 @@ def show_digit(digit, col_vector=False):
 
 
 def try_it_out(W, Um, digit):
-    ''' Visually / Manually try out the classifier.
+    """Visually / Manually try out the classifier.
 
     W is the classifier itself that can make a prediction given a feature
     vector Um is the feature 'mapper' that can reduce the dimensionality of raw
@@ -46,7 +48,7 @@ def try_it_out(W, Um, digit):
         digit = x_test[:, arbitrary_index]
         try_it_out(W_keep, Um_keep, digit)
 
-    '''
+    """
     # Reduce dimensionality of the digit (=get feature vector for digit)
     f_digit = np.dot(Um.T, digit)
     # Make prediction on the feature vector (=get probability vector)
@@ -57,7 +59,9 @@ def try_it_out(W, Um, digit):
 
 
 def load_data(filename='mfeat-pix.txt'):
-    ''' Loads the 'Project Digits' dataset from file and splits it into
+    """Load the data from file.
+
+    Loads the 'Project Digits' dataset from file and splits it into
     test and train as per the project instructions. Also creates the array
     of labels.
 
@@ -65,7 +69,7 @@ def load_data(filename='mfeat-pix.txt'):
     Each example consists of a 240 dimensional column vector, representing
     a 16x15 dimensional image, and a a single integer representing the label.
 
-    '''
+    """
     with open(filename, 'r') as datafile:
         # Load the transposed datafile to get each image in a col vector
         data = np.loadtxt(datafile).T  # (240, 2000)
@@ -89,12 +93,14 @@ def load_data(filename='mfeat-pix.txt'):
 
 
 def preprocess_data(data, subtract_mean=False):
-    ''' Preprocess the data from load_data by normalizing the values to the
+    """Preprocess the data.
+
+    Preprocess the data from load_data by normalizing the values to the
     range [0,1] and centering the data by subtracting the mean.
 
     Centering the data actually decreases performance.. lowest MSE_train ~ -0.5
 
-    '''
+    """
     (x_train, y_train), (x_test, y_test) = data
 
     # Normalize the data to range [0,1] (assuming range [0,6])
@@ -117,11 +123,11 @@ def preprocess_data(data, subtract_mean=False):
 
 
 def compute_first_m_PCs_of_x(x, m):
-    ''' Compute the first m principle components of the dataset matrix x.
+    """Compute the first m principle components of the data-matrix x.
 
-        Um.shape == (240, m)
+    Um.shape == (240, m)
 
-    '''
+    """
     # Compute covariance matrix
     C = np.cov(x)
     # Get the SVD of C
@@ -131,13 +137,15 @@ def compute_first_m_PCs_of_x(x, m):
 
 
 def one_hot_encode_labels(labels):
-    ''' Returns a matrix of one-hot encoded vectors for the given array
+    """Return a One-Hot encoded representation of digit labels.
+
+    Returns a matrix of one-hot encoded vectors for the given array
     of values. Assumes that the labels in y correspond to the indices in
     [0, 9] that should be set to 1 in the resulting matrix.
 
         label_matrix.shape == (10, n_labels)
 
-    '''
+    """
     assert labels.ndim == 1, (labels, labels.shape)
 
     N = len(labels)
@@ -150,11 +158,11 @@ def one_hot_encode_labels(labels):
 
 
 def compute_LR_classifier(F, V):
-    ''' Compute the Linear Regression classifier according to:
+    """Compute the Linear Regression classifier according to lecture notes.
 
-        W' = (F F')^-1 F V'
+    W' = (F F')^-1 F V'
 
-    '''
+    """
     F_Fprime = np.dot(F, F.T)           # F*F'
     F_Fp_inv = np.linalg.inv(F_Fprime)  # (F*F')^-1
 
@@ -165,13 +173,13 @@ def compute_LR_classifier(F, V):
 
 
 def compute_MSE(V, F, W):
-    ''' Compute the Mean Squared Error.
+    """Compute the Mean Squared Error.
 
     Find the difference between predictions (=W*F) and label-vectors, square
     the result to avoid negative values, then find the mean squared error for
     each example. Finally, sum these means and divide by n_examples.
 
-    '''
+    """
     n_examples = V.shape[1]
     squared_error = np.square(V - np.dot(W, F))  # (10, 1000)
     mean_squared_error = squared_error.mean(axis=0)  # (1000, )
@@ -179,7 +187,7 @@ def compute_MSE(V, F, W):
 
 
 def compute_MR(V, F, W):
-    ''' Compute the Misclassification Rate.
+    """Compute the Misclassification Rate.
 
     Calculate all prediction vectors, then find the argmax of each vector to
     get an array containing the best guesses for each example in F.
@@ -190,7 +198,7 @@ def compute_MR(V, F, W):
     Then, count the number of times the answer was incorrect and divide by
     n_examples.
 
-    '''
+    """
     n_examples = V.shape[1]
 
     pred = np.dot(W, F)  # (10, n_examples)
