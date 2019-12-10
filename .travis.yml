@@ -12,5 +12,5 @@ install:
   - pip install mypy flake8
 
 script:
-  - mypy Digits/digits.py
-  - flake8 Digits/digits.py
+  - mypy Digits/digits.py NeuralNetworks/perceptron.py
+  - flake8 Digits/digits.py NeuralNetworks/perceptron.py

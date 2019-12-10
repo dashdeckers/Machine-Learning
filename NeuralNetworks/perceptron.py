@@ -1,9 +1,11 @@
-import time
-import numpy as np
-import matplotlib.pyplot as plt
 import multiprocessing as mp
+import time
 from itertools import groupby
 from operator import itemgetter
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 class Vector:
     ''' A helper class to make easier to work with Vectors in
@@ -52,6 +54,7 @@ class Vector:
 
         return Vector((self.y, -self.x))
 
+
 def add_quiver(ax, weights, verbose=False):
     ''' Add a Quiver showing the weight vector to the plot. Only
     works in 2D and not if the weight vector is a zero vector.
@@ -97,8 +100,9 @@ def add_quiver(ax, weights, verbose=False):
     )
     return Q, lines
 
+
 def plot(xi, labels, verbose=False):
-    ''' Creates a 2D plot with the (x, y) coordinates in xi, in two 
+    ''' Creates a 2D plot with the (x, y) coordinates in xi, in two
     different colors depending on the labels. The plot is interactive
     to allow for iterative updating.
     '''
@@ -108,7 +112,7 @@ def plot(xi, labels, verbose=False):
         # Create a figure and plot the points
         plt.ion()
         fig = plt.figure()
-        ax  = fig.add_subplot(111)
+        ax = fig.add_subplot(111)
         x, y = xi.T
         ax.scatter(x, y, c=labels)
         fig.canvas.draw()
@@ -116,9 +120,11 @@ def plot(xi, labels, verbose=False):
         # Prevent a messy tkinter error when manually closing the plot
         global running
         running = True
+
         def handle_close(evt):
             global running
             running = False
+
         fig.canvas.mpl_connect('close_event', handle_close)
 
         # Show the plot and return it
@@ -150,6 +156,7 @@ def plot(xi, labels, verbose=False):
         # If not 2D, become a bogus generator
         while True:
             _ = yield
+
 
 def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
     ''' Generates P randomly generated N-dimensional feature
@@ -188,6 +195,7 @@ def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
 
     return data, labels, weights
 
+
 def response(w, xi, theta=0):
     ''' The Response of the perceptron.
 
@@ -205,6 +213,7 @@ def response(w, xi, theta=0):
         return 1
     else:
         return response
+
 
 def run_rosenblatt(N=2, P=5, n_max=5, clamped=True, verbose=False):
     ''' Rosenblatt learning algorithm, where:
@@ -224,7 +233,7 @@ def run_rosenblatt(N=2, P=5, n_max=5, clamped=True, verbose=False):
 
     # Epoch loop
     for epoch in range(n_max):
-        if verbose: print(f'Epoch {epoch}/{n_max}')
+        if verbose: print(f'Epoch {epoch}/{n_max}')  # noqa
 
         # Data loop
         stop_early = True
@@ -248,6 +257,7 @@ def run_rosenblatt(N=2, P=5, n_max=5, clamped=True, verbose=False):
     # If the stop early condition never happened, failure
     return (False, weights)
 
+
 # Functions to execute the actions that individual threads need to take
 def run_experiment(alpha, N, clamped):
     Pa = 0
@@ -259,10 +269,11 @@ def run_experiment(alpha, N, clamped):
 
     return (N, alpha, Pa / repetitions)
 
+
 def collect_data(clamped=False):
     # Create the arguments to run
-    alphaset = np.arange(0.75,3,0.25)
-    dimensions = [5, 20] # [150, 20, 5]
+    alphaset = np.arange(0.75, 3, 0.25)
+    dimensions = [5, 20]  # [150, 20, 5]
     args = [(a, N, clamped) for N in dimensions for a in alphaset]
 
     # Determine the number of threads available
@@ -276,16 +287,17 @@ def collect_data(clamped=False):
     pool.close()
 
     # Plot results
-    colours = ["red", "orange", "green", "blue", "purple"]
+    colours = ['red', 'orange', 'green', 'blue', 'purple']
     for colour, tup_list in zip(colours, out_lists):
         prob_vals = [tup[2] for tup in tup_list]
         plt.plot(alphaset, prob_vals, 'r--', c=colour, label=tup_list[0][0])
 
-    plt.legend(title="Number of dimensions")
-    plt.title("Probability of linear separability for Data points/Dimension ratio")
-    plt.xlabel(r'$\alpha$ defined as the ratio of Data Points per Dimension')
-    plt.ylabel("Probability of being linearly seperable (%)")
+    plt.legend(title='Number of dimensions')
+    plt.title(r'Probability of linear separability depending on $\alpha$')
+    plt.xlabel(r'$\alpha$ defined as the ratio of Datapoints per Dimension')
+    plt.ylabel('Probability of being linearly seperable (%)')
     plt.show()
+
 
 if __name__ == '__main__':
     # collect_data()
