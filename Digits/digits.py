@@ -206,10 +206,10 @@ if __name__ == '__main__':
     (x_train, y_train), (x_test, y_test) = preprocess_data(load_data())
     print(f'Loaded and preprocessed data ({time.time() - t0})')
 
-    MSE_train_vals = list()
-    MSE_test_vals = list()
-    MR_train_vals = list()
-    MR_test_vals = list()
+    MSE_trains = list()
+    MSE_tests = list()
+    MR_trains = list()
+    MR_tests = list()
     m_vals = list(range(241))
 
     for m in m_vals:
@@ -231,19 +231,19 @@ if __name__ == '__main__':
         print(f'Computed linear regression weight matrix ({time.time() - t0})')
 
         # Step 4: Compute the Errors
-        MSE_train_vals.append(np.log10(compute_MSE(V_train, F_train, W)))
-        MSE_test_vals.append(np.log10(compute_MSE(V_test, F_test, W)))
-        MR_train_vals.append(np.log10(compute_MR(V_train, F_train, W)))
-        MR_test_vals.append(np.log10(compute_MR(V_test, F_test, W)))
+        MSE_trains.append(np.log10(compute_MSE(V_train, F_train, W)))
+        MSE_tests.append(np.log10(compute_MSE(V_test, F_test, W)))
+        MR_trains.append(np.log10(compute_MR(V_train, F_train, W)))
+        MR_tests.append(np.log10(compute_MR(V_test, F_test, W)))
 
         print(f'Computed the Errors ({time.time() - t0})')
-        print(f'\tMSE_train error (for m={m}): {MSE_train_vals[-1]}\n')
+        print(f'\tMSE_train error (for m={m}): {MSE_trains[-1]}\n')
 
     # Step 5: Plot the results
-    plt.plot(m_vals, MSE_train_vals, c='blue', linestyle='--', label='MSE_train')
-    plt.plot(m_vals, MSE_test_vals, c='red', linestyle='--', label='MSE_test')
-    plt.plot(m_vals, MR_train_vals, c='blue', linestyle='-', label='MR_train')
-    plt.plot(m_vals, MR_test_vals, c='red', linestyle='-', label='MR_test')
+    plt.plot(m_vals, MSE_trains, c='blue', linestyle='--', label='MSE_train')
+    plt.plot(m_vals, MSE_tests, c='red', linestyle='--', label='MSE_test')
+    plt.plot(m_vals, MR_trains, c='blue', linestyle='-', label='MR_train')
+    plt.plot(m_vals, MR_tests, c='red', linestyle='-', label='MR_test')
     plt.xlabel('m')
     plt.ylabel('MSE/MR (log10)')
     plt.title('MSE/MR vs chosen m')

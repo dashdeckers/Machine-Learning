@@ -1,0 +1,16 @@
+language: 
+  - python
+
+python:
+  - '3.6'
+
+cache: 
+  - pip
+
+install:
+  - pip install -r Digits/requirements.txt
+  - pip install mypy flake8
+
+script:
+  - mypy Digits/digits.py
+  - flake8 Digits/digits.py
