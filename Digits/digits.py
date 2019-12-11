@@ -157,17 +157,22 @@ def one_hot_encode_labels(labels):
     return label_matrix
 
 
-def compute_LR_classifier(F, V):
+def compute_LR_classifier(F, V, alpha=0):
     """Compute the Linear Regression classifier according to lecture notes.
 
-    W' = (F F')^-1 F V'
+    It includes the Ridge Regression regularization term (eq. 47).
+
+    W' = (F F' + a^2 * I)^-1 F V'
 
     """
-    F_Fprime = np.dot(F, F.T)           # F*F'
-    F_Fp_inv = np.linalg.inv(F_Fprime)  # (F*F')^-1
+    Reg_Term = alpha**2 * np.identity(F.shape[0])
 
-    Triple_F = np.dot(F_Fp_inv, F)      # (F*F')^-1 * F
-    W_transp = np.dot(Triple_F, V.T)    # (F*F')^-1 * F * V'
+    F_Fprime = np.dot(F, F.T)           # F*F'
+    RidgeAdd = F_Fprime + Reg_Term      # (F*F' + a2*I)
+    F_Fp_inv = np.linalg.inv(RidgeAdd)  # (F*F' + a2*I)^-1
+
+    Triple_F = np.dot(F_Fp_inv, F)      # (F*F' + a2*I)^-1 * F
+    W_transp = np.dot(Triple_F, V.T)    # (F*F' + a2*I)^-1 * F * V'
 
     return W_transp.T                   # W'
 
@@ -220,6 +225,7 @@ if __name__ == '__main__':
     MR_tests = list()
     m_vals = list(range(241))
 
+    alpha = 0
     for m in m_vals:
         print(f'Setting m={m}:')
 
@@ -235,7 +241,7 @@ if __name__ == '__main__':
         print(f'One-Hot encoded labels ({time.time() - t0})')
 
         # Step 3: Compute LR Classifier
-        W = compute_LR_classifier(F_train, V_train)
+        W = compute_LR_classifier(F_train, V_train, alpha)
         print(f'Computed linear regression weight matrix ({time.time() - t0})')
 
         # Step 4: Compute the Errors
@@ -245,7 +251,8 @@ if __name__ == '__main__':
         MR_tests.append(np.log10(compute_MR(V_test, F_test, W)))
 
         print(f'Computed the Errors ({time.time() - t0})')
-        print(f'\tMSE_train error (for m={m}): {MSE_trains[-1]}\n')
+        print(f'\tMSE_train error (for m={m}): {MSE_trains[-1]}')
+        print(f'\tMSE_test  error (for m={m}): {MSE_tests[-1]}\n')
 
     # Step 5: Plot the results
     plt.plot(m_vals, MSE_trains, c='blue', linestyle='--', label='MSE_train')
@@ -254,6 +261,6 @@ if __name__ == '__main__':
     plt.plot(m_vals, MR_tests, c='red', linestyle='-', label='MR_test')
     plt.xlabel('m')
     plt.ylabel('MSE/MR (log10)')
-    plt.title('MSE/MR vs chosen m')
+    plt.title(f'MSE/MR vs chosen m (with alpha={alpha})')
     plt.legend()
     plt.show()
