@@ -298,7 +298,8 @@ def collect_data(clamped=False):
     pool.close()
 
     # Plot results
-    colours = ['red', 'orange', 'green', 'blue', 'purple']
+    plt.ion()
+    colours = ["red", "orange", "green", "blue", "purple"]
     for colour, tup_list in zip(colours, out_lists):
         prob_vals = [tup[2] for tup in tup_list]
         plt.plot(alphaset, prob_vals, 'r--', c=colour, label=tup_list[0][0])

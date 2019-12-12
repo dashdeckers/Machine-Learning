@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+
 def show_digit(digit, col_vector=False):
     """Show the digit as an image.
 
@@ -78,6 +79,7 @@ def load_data(filename='mfeat-pix.txt'):
         labels = np.zeros(data.shape[1], dtype=np.int)
         for digit in range(10):
             labels[digit * 200: (digit+1) * 200] = digit  # (2000,)
+
 
         # Split the data into train and test by first determining the indices
         even = np.array([np.arange(i*100, (i+1)*100) for i in range(0, 20, 2)])
@@ -213,6 +215,7 @@ def compute_MR(V, F, W):
 
 
 if __name__ == '__main__':
+
     t0 = time.time()
 
     # Step 0: Load and preprocess Data
@@ -264,3 +267,4 @@ if __name__ == '__main__':
     plt.title(f'MSE/MR vs chosen m (with alpha={alpha})')
     plt.legend()
     plt.show()
+
