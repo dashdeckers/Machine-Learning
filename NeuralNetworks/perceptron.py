@@ -139,8 +139,8 @@ def plot(xi, labels, verbose=False):
         # Show the plot and return it
         plt.axis('equal')
         plt.show()
-        plt.xlim(-3, 3)
-        plt.ylim(-3, 3)
+        plt.xlim(-5, 5)
+        plt.ylim(-5, 5)
         fig.canvas.draw()
 
         # Initialize perpendicular arrow and line
@@ -272,7 +272,7 @@ def run_rosenblatt(N=2, P=5, n_max=5, clamped=True, verbose=False):
 # Functions to execute the actions that individual threads need to take
 def run_experiment(alpha, N, clamped):
     Pa = 0
-    repetitions = 50
+    repetitions = 100
     for i in range(repetitions):
         P = int(alpha * N)
         result, _ = run_rosenblatt(N=N, P=P, n_max=100, clamped=clamped)
@@ -283,13 +283,13 @@ def run_experiment(alpha, N, clamped):
 
 def collect_data(clamped=False):
     # Create the arguments to run
-    alphaset = np.arange(0.75, 3, 0.25)
-    dimensions = [5, 20]  # [150, 20, 5]
+    alphaset = np.arange(0.75, 5, 0.1)
+    dimensions = [5, 20, 150]  # [150, 20, 5]
     args = [(a, N, clamped) for N in dimensions for a in alphaset]
 
     # Determine the number of threads available
-    pool = mp.Pool(mp.cpu_count())
     print(f'CPUs = {mp.cpu_count()}')
+    pool = mp.Pool(mp.cpu_count())
 
     # Have each thread execute on a subset of the various alphas
     output = pool.starmap(run_experiment, args)
@@ -299,10 +299,16 @@ def collect_data(clamped=False):
 
     # Plot results
     plt.ion()
-    colours = ["red", "orange", "green", "blue", "purple"]
+    if clamped:
+        colours = ["blue", "purple", "black"]
+    else:
+        colours = ["red", "orange", "green"]
     for colour, tup_list in zip(colours, out_lists):
         prob_vals = [tup[2] for tup in tup_list]
-        plt.plot(alphaset, prob_vals, 'r--', c=colour, label=tup_list[0][0])
+        if clamped:
+            plt.plot(alphaset, prob_vals, c=colour, label="N= "+str(tup_list[0][0])+", clamped")
+        else:
+            plt.plot(alphaset, prob_vals, c=colour, label="N= "+str(tup_list[0][0])+ ", not clamped")
 
     plt.legend(title='Number of dimensions')
     plt.title(r'Probability of linear separability depending on $\alpha$')
@@ -312,5 +318,5 @@ def collect_data(clamped=False):
 
 
 if __name__ == '__main__':
-    # collect_data()
+    collect_data()
     pass

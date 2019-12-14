@@ -7,6 +7,7 @@ import numpy as np
 
 
 
+
 def show_digit(digit, col_vector=False):
     """Show the digit as an image.
 
@@ -59,7 +60,7 @@ def try_it_out(W, Um, digit):
     show_digit(digit, col_vector=True)
 
 
-def load_data(filename='mfeat-pix.txt'):
+def load_data(filename='Copyof_mfeat-pix.txt'):
     """Load the data from file.
 
     Loads the 'Project Digits' dataset from file and splits it into
@@ -227,6 +228,7 @@ if __name__ == '__main__':
     MR_trains = list()
     MR_tests = list()
     m_vals = list(range(241))
+    m_vals=[1]
 
     alpha = 0
     for m in m_vals:
@@ -257,7 +259,11 @@ if __name__ == '__main__':
         print(f'\tMSE_train error (for m={m}): {MSE_trains[-1]}')
         print(f'\tMSE_test  error (for m={m}): {MSE_tests[-1]}\n')
 
+    for i in range(len(x_test)):
+        show_digit(x_test[:,i*20], col_vector=True)
+
     # Step 5: Plot the results
+    '''
     plt.plot(m_vals, MSE_trains, c='blue', linestyle='--', label='MSE_train')
     plt.plot(m_vals, MSE_tests, c='red', linestyle='--', label='MSE_test')
     plt.plot(m_vals, MR_trains, c='blue', linestyle='-', label='MR_train')
@@ -267,4 +273,4 @@ if __name__ == '__main__':
     plt.title(f'MSE/MR vs chosen m (with alpha={alpha})')
     plt.legend()
     plt.show()
-
+    '''
