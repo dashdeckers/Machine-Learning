@@ -1,10 +1,19 @@
 """A Linear Regression baseline algorithm for predicting handwritten digits."""
 
+import sys
 import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import LabelEncoder
+
+
+def timestamp(start_time):
+    """Return the elapsed time in seconds since start_time."""
+    return str(round(time.time() - start_time, 3)) + 's'
 
 
 def show_digit(digit, col_vector=False):
@@ -224,22 +233,65 @@ def compute_MR(V, F, W):
     return (n_examples - np.count_nonzero(true == best)) / n_examples
 
 
+def show_results(y_test, pred, verbose=True):
+    """Show all the results.
+
+    First print the confusion matrix, and then the precision and recall values.
+
+    """
+    precs, recs, *_ = precision_recall_fscore_support(y_test, pred)
+    n_examples = y_test.shape[0]
+    MR = (n_examples - np.count_nonzero(y_test == pred)) / n_examples
+
+    if verbose:
+        print(confusion_matrix(y_test, pred))
+
+        print('')
+        print('Class - Precision - Recall')
+        for digit, prec, rec in zip(range(10), precs, recs):
+            print(f' {str(digit):4s} - {str(round(prec, 3)):9s} - {rec}')
+
+        print('')
+        print(f'Precision (mean, std): {np.mean(precs):.3f}, {np.std(precs):.3f}')  # noqa
+        print(f'Recall (mean, std): {np.mean(recs):.3f}, {np.std(recs):.3f}')
+
+        print('')
+        print(f'Misclassification Rate: {MR:.3f}')
+
+    return (MR, precs, recs)
+
+
+def get_LR_pred(W, F_test):
+    """Get the predictions from the weights of the Linear Regression model."""
+    pred = np.dot(W, F_test)
+    return np.argmax(pred, axis=0)
+
+
+def get_KNN_pred(x_train, y_train, x_test):
+    """Fit a KNN model on the data and return the predictions."""
+    y_train = LabelEncoder().fit_transform(y_train)
+    KNN_model = KNeighborsClassifier().fit(x_train.T, y_train)
+    return KNN_model.predict(x_test.T)
+
+
 if __name__ == '__main__':
 
     t0 = time.time()
 
     # Step 0: Load and preprocess Data
+
+
     if(len(sys.argv) <= 1):
         (x_train, y_train), (x_test, y_test) = preprocess_data(load_data())
     else:
         (x_train, y_train), (x_test, y_test) = preprocess_data(load_data(sys.argv[1], sys.argv[2]))
-    print(f'Loaded and preprocessed data ({time.time() - t0})')
+    print(f'Loaded and preprocessed data ({timestamp(t0)})')
 
     MSE_trains = list()
     MSE_tests = list()
     MR_trains = list()
     MR_tests = list()
-    m_vals = list(range(241))
+    m_vals = [30]  # list(range(241))
 
     alpha = 0
     for m in m_vals:
@@ -249,16 +301,16 @@ if __name__ == '__main__':
         Um = compute_first_m_PCs_of_x(x_train, m)
         F_train = np.dot(Um.T, x_train)
         F_test = np.dot(Um.T, x_test)
-        print(f'Computed PCA feature vectors ({time.time() - t0})')
+        print(f'Computed PCA feature vectors ({timestamp(t0)})')
 
         # Step 2: One-Hot Encode Labels
         V_train = one_hot_encode_labels(y_train)
         V_test = one_hot_encode_labels(y_test)
-        print(f'One-Hot encoded labels ({time.time() - t0})')
+        print(f'One-Hot encoded labels ({timestamp(t0)})')
 
         # Step 3: Compute LR Classifier
         W = compute_LR_classifier(F_train, V_train, alpha)
-        print(f'Computed linear regression weight matrix ({time.time() - t0})')
+        print(f'Computed linear regression weight matrix ({timestamp(t0)})')
 
         # Step 4: Compute the Errors
         MSE_trains.append(np.log10(compute_MSE(V_train, F_train, W)))
@@ -266,12 +318,18 @@ if __name__ == '__main__':
         MR_trains.append(np.log10(compute_MR(V_train, F_train, W)))
         MR_tests.append(np.log10(compute_MR(V_test, F_test, W)))
 
-        print(f'Computed the Errors ({time.time() - t0})')
+        print(f'Computed the Errors ({timestamp(t0)})')
         print(f'\tMSE_train error (for m={m}): {MSE_trains[-1]}')
         print(f'\tMSE_test  error (for m={m}): {MSE_tests[-1]}\n')
 
-    # for i in range(len(x_test)):
-    #     show_digit(x_test[:,i*20], col_vector=True)
+    # If only one m_val has been chosen, then just compare the results and exit
+    if len(m_vals) == 1:
+        print('\nResults for the Linear Regression model:\n')
+        show_results(y_test, get_LR_pred(W, F_test))
+        print('\nResults for the KNN model:\n')
+        show_results(y_test, get_KNN_pred(x_train, y_train, x_test))
+        print('')
+        sys.exit()
 
     # Step 5: Plot the results
 
