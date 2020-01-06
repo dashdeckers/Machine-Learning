@@ -1,5 +1,4 @@
-import os, sys
-import multiprocessing as mp
+import os
 
 
 if __name__ == '__main__':

@@ -7,8 +7,6 @@ import numpy as np
 import sys
 
 
-
-
 def show_digit(digit, col_vector=False):
     """Show the digit as an image.
 
@@ -60,49 +58,6 @@ def try_it_out(W, Um, digit):
     print(f'Best guess: {np.argmax(pred)}')
     show_digit(digit, col_vector=True)
 
-#
-# def load_data(filename='mfeat-pix.txt'):
-#     """Load the data from file.
-#
-#     Loads the 'Project Digits' dataset from file and splits it into
-#     test and train as per the project instructions. Also creates the array
-#     of labels.
-#
-#     Both test and training data will have 1000 examples, 100 of each class.
-#     Each example consists of a 240 dimensional column vector, representing
-#     a 16x15 dimensional image, and a a single integer representing the label.
-#
-#     """
-#     with open(filename, 'r') as datafile:
-#         # Load the transposed datafile to get each image in a col vector
-#         data = np.loadtxt(datafile).T  # (240, 2000) for original, but 240, 2000*c for replicated data
-#         print(data.shape)
-#
-#         # Create an array of labels (each 200*c elements is a digit)
-#         # Can also be determined by ever 10% of total number of digits as defined by data.shape[1]
-#         digitreps = int(data.shape[1] / 10)
-#         print(digitreps)
-#         labels = np.zeros(data.shape[1], dtype=np.int)
-#         for digit in range(10):
-#             labels[digit * digitreps: (digit+1) * digitreps] = digit  # (2000,)
-#         print(labels.shape)
-#
-#         # Split the data into train and test by first determining the indices
-#
-#         even = np.array([np.arange(i*100, (i+1)*100) for i in range(0, int((digitreps/10)), 2)])
-#         odd = np.array([np.arange(i*100, (i+1)*100) for i in range(1, int((digitreps/10)), 2)])
-#
-#         print(even)
-#         print(odd)
-#         print(odd.shape)
-#         even = even.reshape(-1)  # reshape to get a single,
-#         odd = odd.reshape(-1)    # long array of indices: (1000, )
-#
-#         # And then selecting via the array of indices
-#         x_train, y_train = data[:, even], labels[even]
-#         x_test,  y_test = data[:, odd],  labels[odd]
-#         #exit(1)
-#         return (x_train, y_train), (x_test, y_test)
 
 def label_data(datafile):
     # Load the transposed datafile to get each image in a col vector
@@ -118,6 +73,7 @@ def label_data(datafile):
         labels[digit * digitreps: (digit+1) * digitreps] = digit
 
     return data, labels
+
 
 def load_data(s=0.0, c=1):
     """Load the data from file.
@@ -138,7 +94,7 @@ def load_data(s=0.0, c=1):
     trainfile = open('traindata/traindata_s_' + str(s) + '_c_' + str(c) + '.txt', 'r')
 
     x_train, y_train = label_data(trainfile)
-    x_test, y_test   = label_data(testfile)
+    x_test, y_test = label_data(testfile)
 
     print(len(x_train))
     print(len(y_train))
@@ -272,10 +228,7 @@ if __name__ == '__main__':
 
     t0 = time.time()
 
-
-
     # Step 0: Load and preprocess Data
-
     if(len(sys.argv) <= 1):
         (x_train, y_train), (x_test, y_test) = preprocess_data(load_data())
     else:
@@ -331,4 +284,3 @@ if __name__ == '__main__':
     plt.title(f'MSE/MR vs chosen m (with alpha={alpha})')
     plt.legend()
     plt.show()
-
