@@ -96,7 +96,6 @@ def load_data(s=0.0, c=1):
     a 16x15 dimensional image, and a a single integer representing the label.
 
     """
-
     # Load the transposed datafile to get each image in a col vector
     testpath = pathlib.Path(__file__).parent / 'testdata/testdata.txt'
     trainpath = pathlib.Path(__file__).parent / \
