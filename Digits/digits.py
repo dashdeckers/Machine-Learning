@@ -5,6 +5,7 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelEncoder
@@ -67,38 +68,49 @@ def try_it_out(W, Um, digit):
     show_digit(digit, col_vector=True)
 
 
-def load_data(filename='mfeat-pix.txt'):
+def label_data(datafile):
+    # Load the transposed datafile to get each image in a col vector
+    data = np.loadtxt(datafile).T  # (240, 2000) for original, but 240, 2000*c for replicated data
+    print(data.shape)
+
+    # Create an array of labels (each 200*c elements is a digit)
+    # Can also be determined by ever 10% of total number of digits as defined by data.shape[1]
+    digitreps = int(data.shape[1] / 10)
+
+    labels = np.zeros(data.shape[1], dtype=np.int)
+    for digit in range(10):
+        labels[digit * digitreps: (digit+1) * digitreps] = digit
+
+    return data, labels
+
+
+def load_data(s=0.0, c=1):
     """Load the data from file.
 
-    Loads the 'Project Digits' dataset from file and splits it into
-    test and train as per the project instructions. Also creates the array
-    of labels.
+    Loads the 'Project Digits' dataset from file. The data is already split into a noisy train and noiseless test set.
+    The array of labels is created in label_data.
 
-    Both test and training data will have 1000 examples, 100 of each class.
+    Test data will have 1000 examples, 100 of each class.
+    Train data will have 1000*c examples, 100*c of each class.
+
     Each example consists of a 240 dimensional column vector, representing
     a 16x15 dimensional image, and a a single integer representing the label.
 
     """
-    with open(filename, 'r') as datafile:
-        # Load the transposed datafile to get each image in a col vector
-        data = np.loadtxt(datafile).T  # (240, 2000)
 
-        # Create an array of labels (each 200 elements is a digit)
-        labels = np.zeros(data.shape[1], dtype=np.int)
-        for digit in range(10):
-            labels[digit * 200: (digit+1) * 200] = digit  # (2000,)
+    # Load the transposed datafile to get each image in a col vector
+    testfile = open('testdata/testdata.txt', 'r')
+    trainfile = open('traindata/traindata_s_' + str(s) + '_c_' + str(c) + '.txt', 'r')
 
-        # Split the data into train and test by first determining the indices
-        even = np.array([np.arange(i*100, (i+1)*100) for i in range(0, 20, 2)])
-        odd = np.array([np.arange(i*100, (i+1)*100) for i in range(1, 20, 2)])
-        even = even.reshape(-1)  # reshape to get a single,
-        odd = odd.reshape(-1)    # long array of indices: (1000, )
+    x_train, y_train = label_data(trainfile)
+    x_test, y_test = label_data(testfile)
 
-        # And then selecting via the array of indices
-        x_train, y_train = data[:, even], labels[even]
-        x_test,  y_test = data[:, odd],  labels[odd]
+    print(len(x_train))
+    print(len(y_train))
+    print(len(x_test))
+    print(len(y_test))
 
-        return (x_train, y_train), (x_test, y_test)
+    return (x_train, y_train), (x_test, y_test)
 
 
 def preprocess_data(data, subtract_mean=False):
@@ -263,10 +275,16 @@ def get_KNN_pred(x_train, y_train, x_test):
 
 
 if __name__ == '__main__':
+
     t0 = time.time()
 
     # Step 0: Load and preprocess Data
-    (x_train, y_train), (x_test, y_test) = preprocess_data(load_data())
+
+
+    if(len(sys.argv) <= 1):
+        (x_train, y_train), (x_test, y_test) = preprocess_data(load_data())
+    else:
+        (x_train, y_train), (x_test, y_test) = preprocess_data(load_data(sys.argv[1], sys.argv[2]))
     print(f'Loaded and preprocessed data ({timestamp(t0)})')
 
     MSE_trains = list()
@@ -314,6 +332,7 @@ if __name__ == '__main__':
         sys.exit()
 
     # Step 5: Plot the results
+
     plt.plot(m_vals, MSE_trains, c='blue', linestyle='--', label='MSE_train')
     plt.plot(m_vals, MSE_tests, c='red', linestyle='--', label='MSE_test')
     plt.plot(m_vals, MR_trains, c='blue', linestyle='-', label='MR_train')
