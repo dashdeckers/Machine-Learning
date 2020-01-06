@@ -5,7 +5,6 @@ import time
 import pathlib
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelEncoder
@@ -100,7 +99,8 @@ def load_data(s=0.0, c=1):
 
     # Load the transposed datafile to get each image in a col vector
     testpath = pathlib.Path(__file__).parent / 'testdata/testdata.txt'
-    trainpath = pathlib.Path(__file__).parent / ('traindata/traindata_s_' + str(s) + '_c_' + str(c) + '.txt')
+    trainpath = pathlib.Path(__file__).parent / \
+        ('traindata/traindata_s_' + str(s) + '_c_' + str(c) + '.txt')
     testfile = open(testpath, 'r')
     trainfile = open(trainpath, 'r')
 
@@ -281,8 +281,6 @@ if __name__ == '__main__':
     t0 = time.time()
 
     # Step 0: Load and preprocess Data
-
-
     if(len(sys.argv) <= 1):
         (x_train, y_train), (x_test, y_test) = preprocess_data(load_data())
     else:
