@@ -1,7 +1,7 @@
 """A Linear Regression baseline algorithm for predicting handwritten digits."""
 
 import time
-
+import pathlib
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
@@ -61,11 +61,10 @@ def try_it_out(W, Um, digit):
 
 def label_data(datafile):
     # Load the transposed datafile to get each image in a col vector
-    data = np.loadtxt(datafile).T  # (240, 2000) for original, but 240, 2000*c for replicated data
+    data = np.loadtxt(datafile).T  # (240, 100c)
     print(data.shape)
 
-    # Create an array of labels (each 200*c elements is a digit)
-    # Can also be determined by ever 10% of total number of digits as defined by data.shape[1]
+    # Label every 10% as a new digit
     digitreps = int(data.shape[1] / 10)
 
     labels = np.zeros(data.shape[1], dtype=np.int)
@@ -78,7 +77,8 @@ def label_data(datafile):
 def load_data(s=0.0, c=1):
     """Load the data from file.
 
-    Loads the 'Project Digits' dataset from file. The data is already split into a noisy train and noiseless test set.
+    Loads the 'Project Digits' dataset from file.
+    The data is already split into a noisy train and noiseless test set.
     The array of labels is created in label_data.
 
     Test data will have 1000 examples, 100 of each class.
@@ -90,8 +90,10 @@ def load_data(s=0.0, c=1):
     """
 
     # Load the transposed datafile to get each image in a col vector
-    testfile = open('testdata/testdata.txt', 'r')
-    trainfile = open('traindata/traindata_s_' + str(s) + '_c_' + str(c) + '.txt', 'r')
+    testpath = pathlib.Path(__file__).parent / 'testdata/testdata.txt'
+    trainpath = pathlib.Path(__file__).parent / ('traindata/traindata_s_' + str(s) + '_c_' + str(c) + '.txt')
+    testfile = open(testpath, 'r')
+    trainfile = open(trainpath, 'r')
 
     x_train, y_train = label_data(trainfile)
     x_test, y_test = label_data(testfile)
@@ -232,7 +234,8 @@ if __name__ == '__main__':
     if(len(sys.argv) <= 1):
         (x_train, y_train), (x_test, y_test) = preprocess_data(load_data())
     else:
-        (x_train, y_train), (x_test, y_test) = preprocess_data(load_data(sys.argv[1], sys.argv[2]))
+        (x_train, y_train), (x_test, y_test) = \
+            preprocess_data(load_data(sys.argv[1], sys.argv[2]))
     print(f'Loaded and preprocessed data ({time.time() - t0})')
 
     MSE_trains = list()
