@@ -1,9 +1,15 @@
 """A Linear Regression baseline algorithm for predicting handwritten digits."""
 
+import sys
 import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import LabelEncoder
+
+
 def timestamp(start_time):
     """Return the elapsed time in seconds since start_time."""
     return str(round(time.time() - start_time, 3)) + 's'
@@ -215,6 +221,38 @@ def compute_MR(V, F, W):
     return (n_examples - np.count_nonzero(true == best)) / n_examples
 
 
+def show_results(y_test, pred):
+    """Show all the results.
+
+    First print the confusion matrix, and then the precision and recall values.
+
+    """
+    print(confusion_matrix(y_test, pred))
+
+    print('')
+    print('Class - Precision - Recall')
+    precs, recs, *_ = precision_recall_fscore_support(y_test, pred)
+    for digit, precision, recall in zip(range(10), precs, recs):
+        print(f' {str(digit):4s} - {str(round(precision, 3)):9s} - {recall}')
+
+    print('')
+    print(f'Precision (mean, std): {np.mean(precs):.3f}, {np.std(precs):.3f}')
+    print(f'Recall (mean, std): {np.mean(recs):.3f}, {np.std(recs):.3f}')
+
+
+def get_LR_pred(W, F_test):
+    """Get the predictions from the weights of the Linear Regression model."""
+    pred = np.dot(W, F_test)
+    return np.argmax(pred, axis=0)
+
+
+def get_KNN_pred(x_train, y_train, x_test):
+    """Fit a KNN model on the data and return the predictions."""
+    y_train = LabelEncoder().fit_transform(y_train)
+    KNN_model = KNeighborsClassifier().fit(x_train.T, y_train)
+    return KNN_model.predict(x_test.T)
+
+
 if __name__ == '__main__':
     t0 = time.time()
 
@@ -256,6 +294,15 @@ if __name__ == '__main__':
         print(f'Computed the Errors ({timestamp(t0)})')
         print(f'\tMSE_train error (for m={m}): {MSE_trains[-1]}')
         print(f'\tMSE_test  error (for m={m}): {MSE_tests[-1]}\n')
+
+    # If only one m_val has been chosen, then just compare the results and exit
+    if len(m_vals) == 1:
+        print('\nResults for the Linear Regression model:\n')
+        show_results(y_test, get_LR_pred(W, F_test))
+        print('\nResults for the KNN model:\n')
+        show_results(y_test, get_KNN_pred(x_train, y_train, x_test))
+        print('')
+        sys.exit()
 
     # Step 5: Plot the results
     plt.plot(m_vals, MSE_trains, c='blue', linestyle='--', label='MSE_train')
