@@ -4,6 +4,9 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+def timestamp(start_time):
+    """Return the elapsed time in seconds since start_time."""
+    return str(round(time.time() - start_time, 3)) + 's'
 
 
 def show_digit(digit, col_vector=False):
@@ -217,7 +220,7 @@ if __name__ == '__main__':
 
     # Step 0: Load and preprocess Data
     (x_train, y_train), (x_test, y_test) = preprocess_data(load_data())
-    print(f'Loaded and preprocessed data ({time.time() - t0})')
+    print(f'Loaded and preprocessed data ({timestamp(t0)})')
 
     MSE_trains = list()
     MSE_tests = list()
@@ -233,16 +236,16 @@ if __name__ == '__main__':
         Um = compute_first_m_PCs_of_x(x_train, m)
         F_train = np.dot(Um.T, x_train)
         F_test = np.dot(Um.T, x_test)
-        print(f'Computed PCA feature vectors ({time.time() - t0})')
+        print(f'Computed PCA feature vectors ({timestamp(t0)})')
 
         # Step 2: One-Hot Encode Labels
         V_train = one_hot_encode_labels(y_train)
         V_test = one_hot_encode_labels(y_test)
-        print(f'One-Hot encoded labels ({time.time() - t0})')
+        print(f'One-Hot encoded labels ({timestamp(t0)})')
 
         # Step 3: Compute LR Classifier
         W = compute_LR_classifier(F_train, V_train, alpha)
-        print(f'Computed linear regression weight matrix ({time.time() - t0})')
+        print(f'Computed linear regression weight matrix ({timestamp(t0)})')
 
         # Step 4: Compute the Errors
         MSE_trains.append(np.log10(compute_MSE(V_train, F_train, W)))
@@ -250,7 +253,7 @@ if __name__ == '__main__':
         MR_trains.append(np.log10(compute_MR(V_train, F_train, W)))
         MR_tests.append(np.log10(compute_MR(V_test, F_test, W)))
 
-        print(f'Computed the Errors ({time.time() - t0})')
+        print(f'Computed the Errors ({timestamp(t0)})')
         print(f'\tMSE_train error (for m={m}): {MSE_trains[-1]}')
         print(f'\tMSE_test  error (for m={m}): {MSE_tests[-1]}\n')
 
