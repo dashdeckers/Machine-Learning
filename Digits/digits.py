@@ -221,23 +221,32 @@ def compute_MR(V, F, W):
     return (n_examples - np.count_nonzero(true == best)) / n_examples
 
 
-def show_results(y_test, pred):
+def show_results(y_test, pred, verbose=True):
     """Show all the results.
 
     First print the confusion matrix, and then the precision and recall values.
 
     """
-    print(confusion_matrix(y_test, pred))
-
-    print('')
-    print('Class - Precision - Recall')
     precs, recs, *_ = precision_recall_fscore_support(y_test, pred)
-    for digit, precision, recall in zip(range(10), precs, recs):
-        print(f' {str(digit):4s} - {str(round(precision, 3)):9s} - {recall}')
+    n_examples = y_test.shape[0]
+    MR = (n_examples - np.count_nonzero(y_test == pred)) / n_examples
 
-    print('')
-    print(f'Precision (mean, std): {np.mean(precs):.3f}, {np.std(precs):.3f}')
-    print(f'Recall (mean, std): {np.mean(recs):.3f}, {np.std(recs):.3f}')
+    if verbose:
+        print(confusion_matrix(y_test, pred))
+
+        print('')
+        print('Class - Precision - Recall')
+        for digit, prec, rec in zip(range(10), precs, recs):
+            print(f' {str(digit):4s} - {str(round(prec, 3)):9s} - {rec}')
+
+        print('')
+        print(f'Precision (mean, std): {np.mean(precs):.3f}, {np.std(precs):.3f}')  # noqa
+        print(f'Recall (mean, std): {np.mean(recs):.3f}, {np.std(recs):.3f}')
+
+        print('')
+        print(f'Misclassification Rate: {MR:.3f}')
+
+    return (MR, precs, recs)
 
 
 def get_LR_pred(W, F_test):
@@ -264,7 +273,7 @@ if __name__ == '__main__':
     MSE_tests = list()
     MR_trains = list()
     MR_tests = list()
-    m_vals = list(range(241))
+    m_vals = [30]  # list(range(241))
 
     alpha = 0
     for m in m_vals:
