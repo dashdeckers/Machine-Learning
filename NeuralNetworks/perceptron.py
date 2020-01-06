@@ -164,7 +164,7 @@ def plot(xi, labels, verbose=False):
     except AssertionError:
         # If not 2D, become a bogus generator
         while True:
-            _ = yield
+            yield
 
 
 def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
@@ -306,9 +306,11 @@ def collect_data(clamped=False):
     for colour, tup_list in zip(colours, out_lists):
         prob_vals = [tup[2] for tup in tup_list]
         if clamped:
-            plt.plot(alphaset, prob_vals, c=colour, label="N= "+str(tup_list[0][0])+", clamped")
+            plt.plot(alphaset, prob_vals, c=colour,
+                     label="N= " + str(tup_list[0][0]) + ", clamped")
         else:
-            plt.plot(alphaset, prob_vals, c=colour, label="N= "+str(tup_list[0][0])+ ", not clamped")
+            plt.plot(alphaset, prob_vals, c=colour,
+                     label="N= " + str(tup_list[0][0]) + ", not clamped")
 
     plt.legend(title='Number of dimensions')
     plt.title(r'Probability of linear separability depending on $\alpha$')
