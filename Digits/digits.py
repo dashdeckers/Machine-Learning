@@ -4,6 +4,7 @@ import pathlib
 import sys
 import time
 from functools import partial
+from random import gauss
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -55,7 +56,7 @@ def label_data(datafile):
 
     labels = np.zeros(data.shape[1], dtype=np.int)
     for digit in range(10):
-        labels[digit * digitreps: (digit+1) * digitreps] = digit
+        labels[digit * digitreps: (digit + 1) * digitreps] = digit
 
     return data, labels
 
@@ -76,8 +77,9 @@ def load_data(s=0.0, c=1):
     """
     # Load the transposed datafile to get each image in a col vector
     testpath = pathlib.Path(__file__).parent / 'testdata/testdata.txt'
-    trainpath = pathlib.Path(__file__).parent / \
-        ('traindata/traindata_s_' + str(s) + '_c_' + str(c) + '.txt')
+    trainpath = pathlib.Path(__file__).parent / ('traindata/traindata_s_'
+                                                 + str(s) + '_c_'
+                                                 + str(c) + '.txt')
 
     x_train, y_train = label_data(trainpath)
     x_test, y_test = label_data(testpath)
@@ -115,7 +117,7 @@ def results(model, data, labels, show_list=[]):
             'rec': partial(show_mean_std, 'recall', recs),
             'F1': partial(show_mean_std, 'f1-score', F1s),
             'acc': partial(print, f'Accuracy: {acc:.3f}'),
-            'MR': partial(print, f'Misclassification Rate: {1-acc:.3f}'),
+            'MR': partial(print, f'Misclassification Rate: {1 - acc:.3f}'),
             'matrix': partial(confusion_matrix, labels, pred),
             'report': partial(classification_report, labels, pred)
         }
@@ -128,11 +130,44 @@ def results(model, data, labels, show_list=[]):
         'rec': [np.mean(recs), np.std(recs)],
         'F1': [np.mean(F1s), np.std(F1s)],
         'acc': acc,
-        'MR': 1-acc,
+        'MR': 1 - acc,
     }
 
 
-def cross_val(pipeline, data, labels, n_splits=10, n_repeats=1):
+def clamp(value, minimum, maximum):
+    if minimum > value:
+        value = minimum
+    if maximum < value:
+        value = maximum
+    return value
+
+
+def add_noise(x_train, y_train, spread=0, copies=1, keep_original=False):
+    noise_train = []
+    for digit_iterator, digit in enumerate(x_train):
+        # If we don't keep the original we remove it here,
+        # but we can still access it through 'digit'
+        if keep_original:
+            noise_train.append(digit)
+
+        for c in range(0, copies):
+            # Every pixel is given a noise,
+            # the newly generated image is appended to what was already there
+            noise_train.append([clamp(pixel + gauss(0, spread), 0, 6)
+                                for pixel in digit])
+    x_train = noise_train
+
+    if not keep_original:
+        y_train = [y for y in y_train for i in range(0, copies)]
+    else:
+        y_train = [y for y in y_train for i in range(0, copies + 1)]
+
+    return x_train, y_train
+
+
+def cross_val(pipeline, data, labels,
+              n_splits=10, n_repeats=1,
+              noise_spread=0, noise_copies=1):
     """Perform cross-validation while adding noise."""
     cv = RepeatedStratifiedKFold(
         n_splits=n_splits,
@@ -147,7 +182,8 @@ def cross_val(pipeline, data, labels, n_splits=10, n_repeats=1):
         y_train, y_test = labels[train_indices], labels[test_indices]
 
         # Add noise + labels to x_train + y_train here, like:
-        # x_train, y_train = add_noise(x_train, y_train)
+        x_train, y_train = add_noise(x_train, y_train,
+                                     noise_spread, noise_copies)
 
         # Fit the model and collect the results (its performance)
         pipeline.fit(x_train, y_train)
@@ -156,7 +192,8 @@ def cross_val(pipeline, data, labels, n_splits=10, n_repeats=1):
     return perf
 
 
-def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0]):
+def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0],
+                   noise_spread=[0], noise_copies=[1]):
     """Perform a parameter sweep on the Linear Regression pipeline.
 
     Pass in the full dataset and labels, and specify which parameters
@@ -167,6 +204,8 @@ def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0]):
     params = list(ParameterGrid({
         'm': m_vals,
         'alpha': alphas,
+        'noise_spread': noise_spread,
+        'noise_copies': noise_copies,
     }))
 
     # Perform cross validation for each parameter combination
@@ -175,7 +214,9 @@ def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0]):
         pipeline.set_params(pca__n_components=param_set['m'])
         pipeline.set_params(LR__alpha=param_set['alpha'])
 
-        perf = cross_val(pipeline, data, labels)
+        perf = cross_val(pipeline, data, labels,
+                         noise_spread=param_set['noise_spread'],
+                         noise_copies=param_set['noise_copies'])
         results.append((param_set, perf))
 
     return results
@@ -192,7 +233,7 @@ def do_everything():
     labels = np.zeros(data.shape[0], dtype=np.int)
     digitreps = int(data.shape[0] / 10)
     for digit in range(10):
-        labels[digit * digitreps: (digit+1) * digitreps] = digit
+        labels[digit * digitreps: (digit + 1) * digitreps] = digit
 
     # Define the pipeline
     pipeline = Pipeline([
@@ -205,6 +246,7 @@ def do_everything():
     results = param_sweep_LR(pipeline, data, labels)
 
     return results
+
 
 #########################################################################
 
