@@ -77,8 +77,9 @@ def load_data(s=0.0, c=1):
     """
     # Load the transposed datafile to get each image in a col vector
     testpath = pathlib.Path(__file__).parent / 'testdata/testdata.txt'
-    trainpath = pathlib.Path(__file__).parent / \
-                ('traindata/traindata_s_' + str(s) + '_c_' + str(c) + '.txt')
+    trainpath = pathlib.Path(__file__).parent / ('traindata/traindata_s_'
+                                                 + str(s) + '_c_'
+                                                 + str(c) + '.txt')
 
     x_train, y_train = label_data(trainpath)
     x_test, y_test = label_data(testpath)
@@ -142,7 +143,6 @@ def clamp(value, minimum, maximum):
 
 
 def add_noise(x_train, y_train, spread=0, copies=1, keep_original=False):
-
     noise_train = []
     for digit_iterator, digit in enumerate(x_train):
         # If we don't keep the original we remove it here,
