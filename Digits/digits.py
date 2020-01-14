@@ -155,7 +155,6 @@ def add_noise(x_train, y_train, spread=0, copies=1, keep_original=False):
             # the newly generated image is appended to what was already there
             noise_train.append([clamp(pixel + gauss(0, spread), 0, 6)
                                 for pixel in digit])
-
     x_train = noise_train
 
     if not keep_original:
@@ -166,7 +165,9 @@ def add_noise(x_train, y_train, spread=0, copies=1, keep_original=False):
     return x_train, y_train
 
 
-def cross_val(pipeline, data, labels, n_splits=10, n_repeats=1):
+def cross_val(pipeline, data, labels,
+              n_splits=10, n_repeats=1,
+              noise_spread=0, noise_copies=1):
     """Perform cross-validation while adding noise."""
     cv = RepeatedStratifiedKFold(
         n_splits=n_splits,
@@ -181,7 +182,8 @@ def cross_val(pipeline, data, labels, n_splits=10, n_repeats=1):
         y_train, y_test = labels[train_indices], labels[test_indices]
 
         # Add noise + labels to x_train + y_train here, like:
-        x_train, y_train = add_noise(x_train, y_train)
+        x_train, y_train = add_noise(x_train, y_train,
+                                     noise_spread, noise_copies)
 
         # Fit the model and collect the results (its performance)
         pipeline.fit(x_train, y_train)
@@ -190,7 +192,8 @@ def cross_val(pipeline, data, labels, n_splits=10, n_repeats=1):
     return perf
 
 
-def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0]):
+def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0],
+                   noise_spread=[0], noise_copies=[1]):
     """Perform a parameter sweep on the Linear Regression pipeline.
 
     Pass in the full dataset and labels, and specify which parameters
@@ -201,6 +204,8 @@ def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0]):
     params = list(ParameterGrid({
         'm': m_vals,
         'alpha': alphas,
+        'noise_spread': noise_spread,
+        'noise_copies': noise_copies,
     }))
 
     # Perform cross validation for each parameter combination
@@ -209,7 +214,9 @@ def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0]):
         pipeline.set_params(pca__n_components=param_set['m'])
         pipeline.set_params(LR__alpha=param_set['alpha'])
 
-        perf = cross_val(pipeline, data, labels)
+        perf = cross_val(pipeline, data, labels,
+                         noise_spread=param_set['noise_spread'],
+                         noise_copies=param_set['noise_copies'])
         results.append((param_set, perf))
 
     return results
