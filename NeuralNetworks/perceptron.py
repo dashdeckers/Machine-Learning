@@ -19,8 +19,9 @@ class Vector:
     def __init__(self, coords):
         self.coords = np.array(coords)
         # Set x and y for convenience in 2D
-        self.x = coords[0]
-        self.y = coords[1]
+        if len(self.coords) == 2:
+            self.x = coords[0]
+            self.y = coords[1]
 
     def __sub__(self, other):
         return Vector(np.subtract(self.coords, other.coords))
@@ -36,8 +37,10 @@ class Vector:
             return Vector(np.multiply(self.coords, other))
 
     def __str__(self):
-        # Works for 2D only
-        return f'({self.x}, {self.y})'
+        if len(self.coords) == 2:
+            return f'({self.x}, {self.y})'
+        else:
+            return f'Vector([{self.coords}])'
 
     def __repr__(self):
         return self.__str__()
@@ -162,12 +165,12 @@ def plot(xi, labels, verbose=False):
                 time.sleep(0.5)
 
     except AssertionError:
-        # If not 2D, become a bogus generator
+        # If not 2D (or any issue), become a bogus generator
         while True:
             yield
 
 
-def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
+def generate_data(P, N=2, mean=0, variance=1, teacher=None, clamped=False):
     """Generate the data.
 
     Generates P randomly generated N-dimensional feature
@@ -177,12 +180,13 @@ def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
     The feature vector values are sampled from a Gaussian
     distribution with mean and variance, and the binary
     labels are either randomly selected from {-1, 1} with
-    an even distribution, or equal to the value of labels.
+    an even distribution, or set according to the teacher
+    perceptron w.
 
     If clamped is set to True, then append -1 to each datapoint
     and append 0 to the weight vector. This results in a final
     dimension of N+1. This allows for inhomogeneous solutions
-    with an offset (in practice by increasing dimensionality).
+    with an offset (in practice by incrementing dimensionality).
     """
     mean = [mean] * N
     covar = np.identity(N) * variance
@@ -190,11 +194,13 @@ def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
     data = np.random.multivariate_normal(mean, covar, P)
     weights = np.zeros(shape=(N,))
 
-    # Randomly assign labels, or assign them all the value of labels
-    if labels == 'random':
-        labels = np.random.choice([-1, 1], P)
+    # Randomly assign labels, or assign them according to w*
+    if teacher is not None:
+        labels = 'TODO'
+        # assert that the dimensionality of teacher and data is compatible
+        # something like loop through data and label = sign(datapoint)
     else:
-        labels = np.array([labels] * P)
+        labels = np.random.choice([-1, 1], P)
 
     # Clamp the generated data to add a degree of freedom
     if clamped:
@@ -207,23 +213,17 @@ def generate_data(P, N=2, mean=0, variance=1, labels='random', clamped=False):
     return data, labels, weights
 
 
-def response(w, xi, theta=0):
+def sign(w, xi, theta=0):
     """Compute the Response of the perceptron.
 
     S_w(xi) = {
         +1 if dot(w, xi) >= theta,
         -1 if dot(w, xi) <  theta
     }
-
-    The points given by xi are linearly separated by
-    the hyperplane given by dot(w, xi) - theta.
     """
     response = np.sign(np.dot(w, xi) - theta)
     # np.sign(0) == 0, but we want response=1 in this case
-    if response == 0:
-        return 1
-    else:
-        return response
+    return 1 if response == 0 else response
 
 
 def run_rosenblatt(N=2, P=5, n_max=5, clamped=True, verbose=False):
@@ -251,7 +251,7 @@ def run_rosenblatt(N=2, P=5, n_max=5, clamped=True, verbose=False):
         for xi_t, label_t in zip(xi, labels):
             # Get the error via Hebbian learning:
             # If response == label: Error = 1, else Error = -1
-            E_t = response(weights, xi_t) * label_t
+            E_t = sign(weights, xi_t) * label_t
 
             # If Error == -1, update weights and don't stop early
             if E_t == -1:
@@ -284,7 +284,7 @@ def run_experiment(alpha, N, clamped):
 def collect_data(clamped=False):
     # Create the arguments to run
     alphaset = np.arange(0.75, 5, 0.1)
-    dimensions = [5, 20, 150]  # [150, 20, 5]
+    dimensions = [5]  # , 20, 150]  # [150, 20, 5]
     args = [(a, N, clamped) for N in dimensions for a in alphaset]
 
     # Determine the number of threads available
