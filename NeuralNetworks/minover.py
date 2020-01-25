@@ -47,7 +47,7 @@ def run_minover(P=5, N=2, t_max=100, clamped=False, verbose=False):
             # Find the datapoint v = (xi_v, S_v) with minimal stability
             # Min stability = w .* xi_v * S_v / |w|
 
-            # We can't determine a norm when w = 0, and we can't divide by it either
+            # We can't determine a norm when w = 0
             if w.sum() == 0:
                 stability = np.dot(w, xi_v * S_v)
             else:
@@ -96,7 +96,7 @@ def collect_data(clamped=False):
     # Plot results
     if clamped:
         colours = ["blue", "purple", "black"]
-        text = ', clamped'
+        # text = ', clamped'
     else:
         colours = ["red", "orange", "green"]
         # text = ', not clamped'
@@ -104,7 +104,7 @@ def collect_data(clamped=False):
     for colour, tup_list in zip(colours, out_lists):
         prob_vals = [tup[2] for tup in tup_list]
         plt.plot(alphaset, prob_vals, c=colour,
-                 label="N= " + str(tup_list[0][0]) )
+                 label="N= " + str(tup_list[0][0]))
 
     plt.legend(title='Number of dimensions')
     plt.title(r'Learning curve depending on $\alpha$')
