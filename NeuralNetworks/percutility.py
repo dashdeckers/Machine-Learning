@@ -53,8 +53,13 @@ def generate_data(P=20, N=2, mean=0, variance=1, w_opt=None, clamped=False):
 
     # Randomly assign labels, or according to teacher perceptron w*
     if w_opt is not None:
-        assert len(w_opt) == N
-        S = [sign(w_opt, xi_v) for xi_v in xi]
+        if clamped:
+            assert len(w_opt) == N+1
+            xi_clamped = [np.append(xi_v, 0) for xi_v in xi]
+            S = [sign(w_opt, xi_v) for xi_v in xi_clamped]
+        else:
+            assert len(w_opt) == N
+            S = [sign(w_opt, xi_v) for xi_v in xi]
     else:
         S = np.random.choice([-1, 1], P)
 
