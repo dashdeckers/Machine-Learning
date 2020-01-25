@@ -1,12 +1,13 @@
-import time
-from vector import Vector
-import numpy as np
+"""Plotting functions for perceptron algorithms."""
 
+import time
 
 import matplotlib.pyplot as plt
+import numpy as np
+from percutility import Vector
 
 
-def add_quiver(ax, weights, verbose=False):
+def add_quiver(ax, weights):
     """Add quiver to plot.
 
     Add a Quiver showing the weight vector to the plot. Only
@@ -37,12 +38,6 @@ def add_quiver(ax, weights, verbose=False):
     P1 = perp_vec
     P2 = perp_vec * -1
 
-    # Print stuff if verbose is set to True
-    if verbose:
-        print(f'Weight Vector: {weight_vec.coords}')
-        print(f'Perp   Vector: {perp_vec.coords}')
-        print(f'P1: {P1.coords}, P2: {P2.coords}')
-
     # Draw a line between the two points
     lines = ax.plot(
         [P1.x, P2.x],
@@ -54,12 +49,30 @@ def add_quiver(ax, weights, verbose=False):
     return Q, lines
 
 
-def plot(xi, labels, verbose=False):
+def plot(xi, labels):
     """Create the plot.
 
-    Creates a 2D plot with the (x, y) coordinates in xi, in two
-    different colors depending on the labels. The plot is interactive
-    to allow for iterative updating.
+    Plots the 2D coordinates in xi with colors according to labels.
+
+    Returns a generator with which you can iteratively plot a weight
+    vector and its perpendicular separation line.
+
+    Usage:
+    # Create dummy data. Make sure xi is a numpy.ndarray
+    xi = np.array([[0, 1], [1, 1]])
+    labels = [0, 1]
+
+    # Create the plotter
+    plotter = plot(xi, labels)
+
+    # Initialize the plotter and show the first plot
+    next(plotter)
+
+    # Iteratively plot the weight vector
+    weight_vec = [0, 1]
+    for i in [1, 2, 3, 4, 5, 6]:
+        weight_vec[0] += i
+        plotter.send(weight_vec)
     """
     try:
         assert xi.shape[1] == 2, 'Can only plot in 2D'
@@ -82,7 +95,7 @@ def plot(xi, labels, verbose=False):
 
         fig.canvas.mpl_connect('close_event', handle_close)
 
-        # Show the plot and return it
+        # Show the plot
         plt.axis('equal')
         plt.show()
         plt.xlim(-5, 5)
@@ -102,7 +115,7 @@ def plot(xi, labels, verbose=False):
 
             # If weights is not a zero vector, draw a Quiver
             if np.any(weights):
-                Q, lines = add_quiver(ax, weights, verbose)
+                Q, lines = add_quiver(ax, weights)
                 fig.canvas.draw()
                 plt.pause(0.0005)
                 time.sleep(0.5)
