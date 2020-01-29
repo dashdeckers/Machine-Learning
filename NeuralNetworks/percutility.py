@@ -51,18 +51,6 @@ def generate_data(P=20, N=2, mean=0, variance=1, w_opt=None, clamped=False):
     xi = np.random.multivariate_normal(mean, covar, P)
     w = np.zeros(shape=(N,))
 
-    # Randomly assign labels, or according to teacher perceptron w*
-    if w_opt is not None:
-        if clamped:
-            assert len(w_opt) == N+1
-            xi_clamped = [np.append(xi_v, 0) for xi_v in xi]
-            S = [sign(w_opt, xi_v) for xi_v in xi_clamped]
-        else:
-            assert len(w_opt) == N
-            S = [sign(w_opt, xi_v) for xi_v in xi]
-    else:
-        S = np.random.choice([-1, 1], P)
-
     # Clamp the generated data to add a degree of freedom
     if clamped:
         # Add a column vector of -1's to the data
@@ -70,6 +58,12 @@ def generate_data(P=20, N=2, mean=0, variance=1, w_opt=None, clamped=False):
         xi = np.concatenate((xi, clamped_col_vec), axis=1)
         # Add a theta value to the weights
         w = np.append(w, [0])
+
+    # Randomly assign labels, or according to teacher perceptron w*
+    if w_opt is not None:
+        S = [sign(w_opt, xi_v) for xi_v in xi]
+    else:
+        S = np.random.choice([-1, 1], P)
 
     return xi, S, w
 
