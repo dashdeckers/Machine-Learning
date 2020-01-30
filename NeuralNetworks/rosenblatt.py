@@ -10,7 +10,8 @@ from percplotter import plot
 from percutility import generate_data, sign
 
 
-def run_rosenblatt(P=5, N=2, t_max=100, clamped=True, verbose=False):
+def run_rosenblatt(P=5, N=2, t_max=100,
+                   clamped=True, verbose=False, data=None):
     """Rosenblatt algorithm.
 
     N is the number of dimensions
@@ -18,7 +19,11 @@ def run_rosenblatt(P=5, N=2, t_max=100, clamped=True, verbose=False):
     t_max is the maximum number of Epochs to run for
     """
     # Generate data and weights
-    xi, S, w = generate_data(P, N, clamped=clamped)
+    if data is None:
+        xi, S, w = generate_data(P, N, clamped=clamped)
+    else:
+        (xi, S, w) = data
+        N = len(xi[0])
 
     # Initialize plotter, if applicable
     plotter = plot(xi, S)

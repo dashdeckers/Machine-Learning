@@ -3,11 +3,14 @@
 import pathlib
 import sys
 import time
+import multiprocessing as mp
+
 from functools import partial
 from random import gauss
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle as pkl
 from sklearn.decomposition import PCA
 from sklearn.linear_model import RidgeClassifier
 from sklearn.metrics import (accuracy_score, classification_report,
@@ -192,6 +195,17 @@ def cross_val(pipeline, data, labels,
     return perf
 
 
+def executePL(arg):
+    (param_set, data, labels, pipeline) = arg
+    pipeline.set_params(pca__n_components=param_set['m'])
+    pipeline.set_params(LR__alpha=param_set['alpha'])
+
+    perf = cross_val(pipeline, data, labels,
+                     noise_spread=param_set['noise_spread'],
+                     noise_copies=param_set['noise_copies'])
+    return param_set, perf
+
+
 def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0],
                    noise_spread=[0], noise_copies=[1]):
     """Perform a parameter sweep on the Linear Regression pipeline.
@@ -208,16 +222,12 @@ def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0],
         'noise_copies': noise_copies,
     }))
 
+    pool = mp.Pool(mp.cpu_count())
     # Perform cross validation for each parameter combination
-    results = list()
-    for param_set in params:
-        pipeline.set_params(pca__n_components=param_set['m'])
-        pipeline.set_params(LR__alpha=param_set['alpha'])
+    for i, param_set in enumerate(params):
+        params[i] = (param_set, data, labels, pipeline)
 
-        perf = cross_val(pipeline, data, labels,
-                         noise_spread=param_set['noise_spread'],
-                         noise_copies=param_set['noise_copies'])
-        results.append((param_set, perf))
+    results = pool.map(executePL, params)
 
     return results
 
@@ -242,10 +252,21 @@ def do_everything():
         ('LR', RidgeClassifier()),
     ])
 
-    # Do paramsweep with cross validation
-    results = param_sweep_LR(pipeline, data, labels)
+    m_vals = list(range(20, 40))
+    noise_spread = np.linspace(0, 0.25, 3)
+    copies = [10]
+    # knn_k = list(range(3, 11, 2))
 
-    return results
+    noise_spread = np.linspace(0, 1, 3)
+
+    # Do paramsweep with cross validation
+    resultsLR = param_sweep_LR(pipeline, data, labels, m_vals,
+                               noise_spread=noise_spread, noise_copies=copies)
+    # resultsLR = param_sweep_LR(pipeline, data, labels)
+    with open('resultsLR', 'wb') as f:
+        pkl.dump(resultsLR, f)
+
+    return resultsLR
 
 
 #########################################################################
@@ -270,6 +291,7 @@ if __name__ == '__main__':
     # Parameter sweep loop
     alpha = 0
     m_vals = list(range(1, 241))
+    m_vals = [1]
     for m in m_vals:
         print(f'\n\nSetting m={m}:')
 

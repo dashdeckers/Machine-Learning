@@ -8,9 +8,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from percplotter import plot
 from percutility import generalization_error, generate_data
+from rosenblatt import run_rosenblatt
 
 
-def run_minover(P=5, N=2, t_max=100, clamped=False, verbose=False):
+def run_minover(P=5, N=2, t_max=100, clamped=False, verbose=False,
+                random_labeler=False, Rosenblatt=False):
     """Minover algorithm.
 
     N is the number of dimensions
@@ -30,7 +32,15 @@ def run_minover(P=5, N=2, t_max=100, clamped=False, verbose=False):
         P = 1
 
     # Generate data and weights
-    xi, S, w = generate_data(P, N, w_opt=w_opt, clamped=clamped)
+    if random_labeler:
+        xi, S, w = generate_data(P, N, clamped=clamped)
+    else:
+        xi, S, w = generate_data(P, N, w_opt=w_opt, clamped=clamped)
+
+    if Rosenblatt:
+        data = (xi, S, w)
+        (success, w) = run_rosenblatt(P, N, t_max, clamped, verbose, data=data)
+        return generalization_error(w, w_opt)
 
     # Initialize plotter, if applicable
     plotter = plot(xi, S)
@@ -46,7 +56,9 @@ def run_minover(P=5, N=2, t_max=100, clamped=False, verbose=False):
         for xi_v, S_v in zip(xi, S):
             # Find the datapoint v = (xi_v, S_v) with minimal stability
             # Min stability = min local potential = abs(w .* xi_v * S_v)
-            stability = np.abs(np.dot(w, xi_v * S_v))
+            stability = abs(np.dot(w, xi_v * S_v))
+            if random_labeler and sum(w) != 0:
+                stability = np.dot(w, xi_v) * S_v / np.linalg.norm(w)
 
             if min_stability is None or stability < min_stability[2]:
                 min_stability = (xi_v, S_v, stability)
@@ -58,26 +70,31 @@ def run_minover(P=5, N=2, t_max=100, clamped=False, verbose=False):
         # Send the new weights to the plotter
         plotter.send(w)
 
-    return generalization_error(w, w_opt)
+    if random_labeler:
+        return min_stability[2]
+    else:
+        return generalization_error(w, w_opt)
 
 
 # Function to execute the actions that individual threads need to take
-def run_experiment(alpha, N):
+def run_experiment(alpha, N, random_labeler, Rosenblatt=False):
     Pa = 0
     repetitions = 40
     for i in range(repetitions):
         P = int(alpha * N)
-        result = run_minover(P=P, N=N)
+        result = run_minover(P=P, N=N, random_labeler=random_labeler,
+                             Rosenblatt=Rosenblatt)
         Pa += result
 
     return N, alpha, Pa / repetitions
 
 
-def collect_data(clamped=False):
+def collect_data(random_label=False, Rosenblatt=False):
     # Create the arguments to run
-    alphaset = np.arange(0.1, 10, 0.1)
+    alphaset = np.arange(0.25, 6.25, 0.75)
     dimensions = [5, 20, 150]
-    args = [(a, N) for N in dimensions for a in alphaset]
+    args = [(a, N, random_label, Rosenblatt)
+            for N in dimensions for a in alphaset]
 
     # Determine the number of threads available
     print(f'CPUs = {mp.cpu_count()}')
@@ -85,24 +102,31 @@ def collect_data(clamped=False):
 
     # Have each thread execute on a subset of the various alphas
     output = pool.starmap(run_experiment, args)
+    print(output)
     out_lists = [list(g) for _, g in groupby(output, itemgetter(0))]
+    print(out_lists)
     pool.close()
 
     # Plot results
-    if clamped:
+    if Rosenblatt:
         colours = ["blue", "purple", "black"]
-        # text = ', clamped'
+        text = ', Rosenblatt'
     else:
         colours = ["red", "orange", "green"]
-        # text = ', not clamped'
+        text = ', Minover'
 
     for colour, tup_list in zip(colours, out_lists):
         prob_vals = [tup[2] for tup in tup_list]
         plt.plot(alphaset, prob_vals, c=colour,
-                 label="N= " + str(tup_list[0][0]))
+                 label="N= " + str(tup_list[0][0]) + text)
 
     plt.legend(title='Number of dimensions')
     plt.title(r'Learning curve depending on $\alpha$')
     plt.xlabel(r'$\alpha$ defined as the ratio of Datapoints per Dimension')
     plt.ylabel('Average generalization error')
-    plt.show()
+
+    if Rosenblatt:
+        collect_data(False, False)
+        plt.show()
+    else:
+        plt.show()
