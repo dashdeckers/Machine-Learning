@@ -197,6 +197,7 @@ def cross_val(pipeline, data, labels,
 
 def executePL(arg):
     (param_set, data, labels, pipeline) = arg
+    print(param_set['m'])
     pipeline.set_params(pca__n_components=param_set['m'])
     pipeline.set_params(LR__alpha=param_set['alpha'])
 
@@ -229,6 +230,7 @@ def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0],
 
     results = pool.map(executePL, params)
 
+
     return results
 
 
@@ -252,12 +254,10 @@ def do_everything():
         ('LR', RidgeClassifier()),
     ])
 
-    m_vals = list(range(20, 40))
-    noise_spread = np.linspace(0, 0.25, 3)
+    m_vals = list(range(20, 51))
+    noise_spread = np.arange(0, 3.25, 0.25)
     copies = [10]
     # knn_k = list(range(3, 11, 2))
-
-    noise_spread = np.linspace(0, 1, 3)
 
     # Do paramsweep with cross validation
     resultsLR = param_sweep_LR(pipeline, data, labels, m_vals,

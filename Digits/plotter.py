@@ -1,20 +1,35 @@
 import pickle as pkl
 import numpy as np
 import matplotlib.pyplot as plt
-
+import matplotlib
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.preprocessing import normalize
 
 if __name__ == '__main__':
     with open('resultsLR', 'rb') as f:
         data = pkl.load(f)
-    print(len(data))
-    print(len(data[0]))
 
-    x = np.linspace(-1, 1, 21)
-    y = np.linspace(-1, 1, 21)
-    z = np.array([i*i+j*j for j in y for i in x])
+    results_set = np.zeros((len(data), 3))
+    MR_means = []
+    for i, datapoint in enumerate(data):
+        mean = 0
+        for i in range(0, len(datapoint[1])):
+            mean += datapoint[1][i]['MR']
+        mean /= len(datapoint[1])
+        MR_means.append(mean)
+        results_set[i] = [datapoint[0]['noise_spread'], datapoint[0]['m'], mean]
 
-    X, Y = np.meshgrid(x, y)
-    Z = z.reshape(21, 21)
+    x = [datapoint[0]['noise_spread'] for datapoint in data]
+    y = [datapoint[0]['m'] for datapoint in data]
+    z = MR_means
 
-    plt.pcolor(X, Y, Z)
-    plt.show()
+    #plt.scatter(x, y, c=z)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(x,y,z, c=np.negative(z))
+    ax.set_xlabel('Noise spread')
+    ax.set_ylabel('Number of Principle Components')
+    ax.set_zlabel('Misclassification rate')
+
+plt.show()
