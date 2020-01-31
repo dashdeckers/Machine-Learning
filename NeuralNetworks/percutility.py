@@ -3,6 +3,53 @@
 import numpy as np
 
 
+def generate_teacher(N, clamped):
+    """Create a teacher perceptron w_opt.
+
+    Create a random teacher perceptron w_opt and normalize it such that:
+    |w|^2 = N  <==>  |w| = sqrt(N)
+    """
+    if clamped:
+        N += 1
+
+    w_opt = np.random.uniform(low=-1, high=1, size=N)
+    w_opt = w_opt / np.linalg.norm(w_opt) * np.sqrt(N)
+
+    return w_opt
+
+
+def generate_C_eta(xi, S):
+    """Compute the correlation matrix C and an appropriate learning rate eta.
+
+    C.shape == (P, P), with C[u, v] == 1/N * S_u * S_v * np.dot(xi_u, xi_v)
+    0 < eta < C[u, u] for all u
+    """
+    P, N = xi.shape
+    C = np.zeros(shape=(P, P))
+    for i in range(P):
+        for j in range(P):
+            C[i, j] = (S[i] * S[j] * np.dot(xi[i], xi[j])) / N
+
+    lower_b, upper_b = 0, min(C.diagonal())
+    eta = (lower_b + upper_b) / 2
+
+    return C, eta
+
+
+def embedding_to_weights(xi, S, x, N):
+    """Compute the weight vector via embdedding strengths.
+
+    Formula:
+    w = 1/N * SUM_v(x_mu * xi_mu * S_mu)
+    """
+    P, N = xi.shape
+    w = np.zeros(xi.shape[1])
+    for v in range(P):
+        w += (xi[v] * S[v] * x[v])
+
+    return w / N
+
+
 def generalization_error(w, w_opt):
     """Compute the generalization error.
 
@@ -10,7 +57,11 @@ def generalization_error(w, w_opt):
     teacher perceptron w_opt can be computed by finding the angle between them:
 
     e = 1/pi * arccos( (w .* w_opt) / (|w| * |w_opt|) )
+
+    If either w or w_opt is a zero vector, this function returns 1.
     """
+    if sum(w) == 0 or sum(w_opt) == 0:
+        return 1
     return (1 / np.pi) * np.arccos(
         np.dot(w, w_opt) / (Vector(w).magnitude() * Vector(w_opt).magnitude())
     )
@@ -118,7 +169,7 @@ class Vector:
         assert len(self.coords) == 2, 'Perpendicular only works in 2D'
 
         # If this is a zero vector, return self
-        if not any(self.coords):
+        if not self.coords.any():
             return self
 
         return Vector((self.y, -self.x))
