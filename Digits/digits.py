@@ -149,6 +149,13 @@ def execute_thread(pipeline, data, labels, params, classifier):
             'pca__n_components': params['m'],
             'model__alpha': params['alpha'],
         })
+    elif classifier == 'KNN':
+        pipeline.set_params(**{
+            'pca__n_components': params['m'],
+            'model__n_neighbors': params['K'],
+        })
+    else:
+        assert classifier in ['LR', 'KNN']
 
     print(params)
 
@@ -174,9 +181,8 @@ def perform_experiment(exp, filename):
             for params in exp['parameters']]
 
     # Use multiprocessing to delegate functions calls across processors
-    CPUs = mp.cpu_count()
-    print(f'Delegating {len(args)} tasks to {CPUs} cores')
-    pool = mp.Pool(CPUs)
+    print(f'Delegating {len(args)} tasks to {mp.cpu_count()} cores')
+    pool = mp.Pool(mp.cpu_count())
     results = pool.starmap(execute_thread, args)
 
     # Save results to file
@@ -221,7 +227,7 @@ baby_experiment = {
     # Generate the parameter combinations to sweep for
     'parameters': list(ParameterGrid({
         'm': [30],
-        'number_neighbors': [3],
+        'K': [3, 5],
         'noise_spread': np.arange(1, 2.25, 0.5),
         'noise_copies': [10],
     })),
