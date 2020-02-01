@@ -12,6 +12,6 @@ install:
   - pip install mypy flake8 pydocstyle
 
 script:
-  - mypy Digits/digits.py NeuralNetworks/.
-  - flake8 Digits/digits.py NeuralNetworks/.
+  - mypy Digits/. NeuralNetworks/.
+  - flake8 Digits/. NeuralNetworks/.
   - pydocstyle Digits/. NeuralNetworks/.

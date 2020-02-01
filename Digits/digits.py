@@ -1,16 +1,11 @@
 """A Linear Regression baseline algorithm for predicting handwritten digits."""
 
-import pathlib
-import sys
-import time
 import multiprocessing as mp
-
+import pickle as pkl
 from functools import partial
 from random import gauss
 
-import matplotlib.pyplot as plt
 import numpy as np
-import pickle as pkl
 from sklearn.decomposition import PCA
 from sklearn.linear_model import RidgeClassifier
 from sklearn.metrics import (accuracy_score, classification_report,
@@ -21,77 +16,20 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 
-def timestamp(start_time):
-    """Return the elapsed time in seconds since start_time."""
-    return str(round(time.time() - start_time, 3)) + 's'
+def load_data(filename='mfeat-pix.txt'):
+    """Load the data, make the labels."""
+    data = np.loadtxt(filename)
 
-
-def show_digit(digit, col_vector=False):
-    """Show the digit as an image.
-
-    Usage:
-        digit = data[:,0] # get column vector
-        digit = digit.reshape(16, 15) # resize into 2D
-        show_digit(digit)
-
-        digit = data[:,0]
-        show_digit(digit, col_vector=True)
-
-    """
-    if col_vector:
-        assert digit.ndim == 1, (digit, digit.shape)
-        assert digit.shape == (240,), (digit, digit.shape)
-        digit = digit.reshape(16, 15)
-    else:
-        assert digit.ndim == 2, (digit, digit.shape)
-        assert digit.shape == (16, 15), (digit, digit.shape)
-
-    plt.imshow(digit, cmap='Greys')
-    plt.show()
-
-
-def label_data(datafile):
-    # Load the transposed datafile to get each image in a col vector
-    data = np.loadtxt(datafile).T  # (240, 100c)
-
-    # Label every 10% as a new digit
-    digitreps = int(data.shape[1] / 10)
-
-    labels = np.zeros(data.shape[1], dtype=np.int)
+    labels = np.zeros(data.shape[0], dtype=np.int)
+    digitreps = int(data.shape[0] / 10)
     for digit in range(10):
         labels[digit * digitreps: (digit + 1) * digitreps] = digit
 
     return data, labels
 
 
-def load_data(s=0.0, c=1):
-    """Load the data from file.
-
-    Loads the 'Project Digits' dataset from file.
-    The data is already split into a noisy train and noiseless test set.
-    The array of labels is created in label_data.
-
-    Test data will have 1000 examples, 100 of each class.
-    Train data will have 1000*c examples, 100*c of each class.
-
-    Each example consists of a 240 dimensional column vector, representing
-    a 16x15 dimensional image, and a a single integer representing the label.
-
-    """
-    # Load the transposed datafile to get each image in a col vector
-    testpath = pathlib.Path(__file__).parent / 'testdata/testdata.txt'
-    trainpath = pathlib.Path(__file__).parent / ('traindata/traindata_s_'
-                                                 + str(s) + '_c_'
-                                                 + str(c) + '.txt')
-
-    x_train, y_train = label_data(trainpath)
-    x_test, y_test = label_data(testpath)
-
-    return (x_train, y_train), (x_test, y_test)
-
-
 def results(model, data, labels, show_list=[]):
-    """Show and/or return the results.
+    """Show and/or return the results of a model on some data given some labels.
 
     Print metrics by passing the names of the metrics via show_list like so:
     show_list=['prec', 'rec', 'F1', 'acc', 'MR', 'matrix', 'report']
@@ -138,6 +76,7 @@ def results(model, data, labels, show_list=[]):
 
 
 def clamp(value, minimum, maximum):
+    """Clamp a value between a min and a max."""
     if minimum > value:
         value = minimum
     if maximum < value:
@@ -146,32 +85,40 @@ def clamp(value, minimum, maximum):
 
 
 def add_noise(x_train, y_train, spread=0, copies=1, keep_original=False):
-    noise_train = []
-    for digit_iterator, digit in enumerate(x_train):
-        # If we don't keep the original we remove it here,
-        # but we can still access it through 'digit'
+    """Generate more data by adding noise.
+
+    This function takes data = (x_train, y_train) and generates more data by
+    making copies of the data with added Gaussian noise and the same label.
+    """
+    x_noise = []
+    y_noise = []
+    for digit, label in zip(x_train, y_train):
+        # Keep the original if we want to
         if keep_original:
-            noise_train.append(digit)
+            x_noise.append(digit)
+            y_noise.append(label)
 
-        for c in range(0, copies):
-            # Every pixel is given a noise,
-            # the newly generated image is appended to what was already there
-            noise_train.append([clamp(pixel + gauss(0, spread), 0, 6)
-                                for pixel in digit])
-    x_train = noise_train
+        # Create copies with added noise
+        for c in range(copies):
+            # Every pixel is given a Gaussian noise component
+            x_noise.append([clamp(pixel + gauss(0, spread), 0, 6)
+                            for pixel in digit])
+            y_noise.append(label)
 
-    if not keep_original:
-        y_train = [y for y in y_train for i in range(0, copies)]
-    else:
-        y_train = [y for y in y_train for i in range(0, copies + 1)]
-
-    return x_train, y_train
+    return x_noise, y_noise
 
 
 def cross_val(pipeline, data, labels,
               n_splits=10, n_repeats=1,
               noise_spread=0, noise_copies=1):
-    """Perform cross-validation while adding noise."""
+    """Perform cross-validation while adding noise.
+
+    This function brings the noise generation to the cross-validation to make
+    sure that we are using noisy data for training only and not for testing.
+
+    After each split, expand the training data by adding noise and then
+    evaluate and record the performance.
+    """
     cv = RepeatedStratifiedKFold(
         n_splits=n_splits,
         n_repeats=n_repeats,
@@ -184,7 +131,7 @@ def cross_val(pipeline, data, labels,
         x_train, x_test = data[train_indices], data[test_indices]
         y_train, y_test = labels[train_indices], labels[test_indices]
 
-        # Add noise + labels to x_train + y_train here, like:
+        # Expand the data by adding noise to (x_train, y_train)
         x_train, y_train = add_noise(x_train, y_train,
                                      noise_spread, noise_copies)
 
@@ -195,138 +142,91 @@ def cross_val(pipeline, data, labels,
     return perf
 
 
-def executePL(arg):
-    (param_set, data, labels, pipeline) = arg
-    print(param_set['m'])
-    pipeline.set_params(pca__n_components=param_set['m'])
-    pipeline.set_params(LR__alpha=param_set['alpha'])
+def execute_thread(pipeline, data, labels, params, classifier):
+    """Delegate a set of params to multiprocessing."""
+    if classifier == 'LR':
+        pipeline.set_params(**{
+            'pca__n_components': params['m'],
+            'model__alpha': params['alpha'],
+        })
+
+    print(params)
 
     perf = cross_val(pipeline, data, labels,
-                     noise_spread=param_set['noise_spread'],
-                     noise_copies=param_set['noise_copies'])
-    return param_set, perf
+                     noise_spread=params['noise_spread'],
+                     noise_copies=params['noise_copies'])
+
+    return params, perf
 
 
-def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0],
-                   noise_spread=[0], noise_copies=[1]):
-    """Perform a parameter sweep on the Linear Regression pipeline.
+def perform_experiment(exp, filename):
+    """Perform the full experiment.
 
-    Pass in the full dataset and labels, and specify which parameters
-    to sweep for as lists. To use this on a KNN pipeline, simply change
-    the keyword arguments in set_params() accordingly.
+    Does a full parameter sweep for the experiment passed as a dictionary and
+    saves the result to file. The experiment exp should define a pipeline, the
+    parameters to sweep for, and give the name of the classifier.
     """
-    # Generate all possible combinations, producing a list of dicts
-    params = list(ParameterGrid({
-        'm': m_vals,
-        'alpha': alphas,
-        'noise_spread': noise_spread,
-        'noise_copies': noise_copies,
-    }))
+    # Load the data and labels
+    data, labels = load_data()
 
-    pool = mp.Pool(mp.cpu_count())
-    # Perform cross validation for each parameter combination
-    for i, param_set in enumerate(params):
-        params[i] = (param_set, data, labels, pipeline)
+    # Generate all the arguments for function calls in this parameter sweep
+    args = [(exp['pipeline'], data, labels, params, exp['classifier'])
+            for params in exp['parameters']]
 
-    results = pool.map(executePL, params)
+    # Use multiprocessing to delegate functions calls across processors
+    CPUs = mp.cpu_count()
+    print(f'Delegating {len(args)} tasks to {CPUs} cores')
+    pool = mp.Pool(CPUs)
+    results = pool.starmap(execute_thread, args)
+
+    # Save results to file
+    with open(filename, 'wb') as f:
+        pkl.dump(results, f)
 
     return results
 
 
-def do_everything():
-    """Perform the full experiment.
-
-    This is just to show how the old code in the main could
-    be replaced.
-    """
-    # Load the data, make the labels
-    data = np.loadtxt('mfeat-pix.txt')
-    labels = np.zeros(data.shape[0], dtype=np.int)
-    digitreps = int(data.shape[0] / 10)
-    for digit in range(10):
-        labels[digit * digitreps: (digit + 1) * digitreps] = digit
+experiment_LR = {
+    # Set the classifier name (must be one of {'LR', 'KNN'})
+    'classifier': 'LR',
 
     # Define the pipeline
-    pipeline = Pipeline([
+    'pipeline': Pipeline([
         ('normalize', StandardScaler()),
         ('pca', PCA()),
-        ('LR', RidgeClassifier()),
-    ])
+        ('model', RidgeClassifier()),
+    ]),
 
-    m_vals = list(range(20, 51))
-    noise_spread = np.arange(0, 3.25, 0.25)
-    copies = [10]
-    # knn_k = list(range(3, 11, 2))
-
-    # Do paramsweep with cross validation
-    resultsLR = param_sweep_LR(pipeline, data, labels, m_vals,
-                               noise_spread=noise_spread, noise_copies=copies)
-    # resultsLR = param_sweep_LR(pipeline, data, labels)
-    with open('resultsLR', 'wb') as f:
-        pkl.dump(resultsLR, f)
-
-    return resultsLR
+    # Generate the parameter combinations to sweep for
+    'parameters': list(ParameterGrid({
+        'm': list(range(20, 51)),
+        'alpha': [0],
+        'noise_spread': np.arange(0, 3.25, 0.25),
+        'noise_copies': [10],
+    })),
+}
 
 
-#########################################################################
+baby_experiment = {
+    # Set the classifier name (must be one of {'LR', 'KNN'})
+    'classifier': 'KNN',
+
+    # Define the pipeline
+    'pipeline': Pipeline([
+        ('normalize', StandardScaler()),
+        ('pca', PCA()),
+        ('model', KNeighborsClassifier()),
+    ]),
+
+    # Generate the parameter combinations to sweep for
+    'parameters': list(ParameterGrid({
+        'm': [30],
+        'number_neighbors': [3],
+        'noise_spread': np.arange(1, 2.25, 0.5),
+        'noise_copies': [10],
+    })),
+}
 
 
 if __name__ == '__main__':
-    t0 = time.time()
-
-    # Load data
-    if len(sys.argv) <= 1:
-        (x_train, y_train), (x_test, y_test) = load_data()
-    else:
-        (s, c) = (sys.argv[1], sys.argv[2])
-        (x_train, y_train), (x_test, y_test) = load_data(s, c)
-
-    # Initialize data structures to capture all necessary info
-    LR_train = list()
-    LR_test = list()
-    KNN_train = list()
-    KNN_test = list()
-
-    # Parameter sweep loop
-    alpha = 0
-    m_vals = list(range(1, 241))
-    m_vals = [1]
-    for m in m_vals:
-        print(f'\n\nSetting m={m}:')
-
-        # Preprocess the data
-        preprocessing = Pipeline([
-            ('normalize', StandardScaler()),
-            ('pca', PCA(n_components=m)),
-        ])
-
-        x_train_processed = preprocessing.fit_transform(x_train.T)
-        x_test_processed = preprocessing.transform(x_test.T)
-        print(f'Preprocessed the data ({timestamp(t0)})')
-
-        # Fit the models (Only LR runs in 20s, both run in 170s)
-        LR_model = RidgeClassifier().fit(x_train_processed, y_train)
-        KNN_model = KNeighborsClassifier().fit(x_train_processed, y_train)
-
-        # Evaluate the models
-        LR_train.append(results(LR_model, x_train_processed, y_train))
-        LR_test.append(results(LR_model, x_test_processed, y_test))
-        KNN_train.append(results(KNN_model, x_train_processed, y_train))
-        KNN_test.append(results(KNN_model, x_test_processed, y_test))
-        print(f'Crunched the numbers ({timestamp(t0)})')
-
-    # Plot the results
-    MR_LR_train = [np.log10(res['MR']) for res in LR_train]
-    MR_LR_test = [np.log10(res['MR']) for res in LR_test]
-    MR_KNN_train = [np.log10(res['MR']) for res in KNN_train]
-    MR_KNN_test = [np.log10(res['MR']) for res in KNN_test]
-
-    plt.plot(m_vals, MR_LR_train, c='blue', linestyle='-', label='LR_train')
-    plt.plot(m_vals, MR_LR_test, c='red', linestyle='-', label='LR_test')
-    plt.plot(m_vals, MR_KNN_train, c='blue', linestyle='--', label='KNN_train')
-    plt.plot(m_vals, MR_KNN_test, c='red', linestyle='--', label='KNN_test')
-    plt.xlabel('m')
-    plt.ylabel('MR (log10)')
-    plt.title(f'MR vs chosen m (with alpha={alpha})')
-    plt.legend()
-    plt.show()
+    perform_experiment(baby_experiment, 'trash_file')
