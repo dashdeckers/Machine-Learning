@@ -5,7 +5,7 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
 if __name__ == '__main__':
-    with open('LR_fullsweep', 'rb') as f:
+    with open('LR_m70', 'rb') as f:
         data = pkl.load(f)
 
     """
@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
     # Set the performance measure to plot.
     # Can be one of: ['prec', 'rec', 'F1', 'acc', 'MR']
-    measure = 'MR'
+    measure = 'acc'
 
     # Aggregate the performance results together:
     # Each datapoint has a list of results (k results from k-fold cross-val)

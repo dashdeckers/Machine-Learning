@@ -205,7 +205,7 @@ experiment_LR = {
 
     # Generate the parameter combinations to sweep for
     'parameters': list(ParameterGrid({
-        'm': list(range(20, 51)),
+        'm': list(range(40, 101)),
         'alpha': [0],
         'noise_spread': np.arange(0, 3.25, 0.25),
         'noise_copies': [10],
@@ -235,4 +235,4 @@ baby_experiment = {
 
 
 if __name__ == '__main__':
-    perform_experiment(baby_experiment, 'trash_file')
+    perform_experiment(experiment_LR, 'LR_m90')
