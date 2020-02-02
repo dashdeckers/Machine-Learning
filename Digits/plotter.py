@@ -116,7 +116,7 @@ def K_planes(data):
 
 if __name__ == '__main__':
 
-    filename = 'LR_m70'
+    filename = 'LR_m100'
     with open(filename, 'rb') as f:
         data = pkl.load(f)
 
@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
     # Set the performance measure to plot.
     # Can be one of: ['prec', 'rec', 'F1', 'acc', 'MR']
-    performance_measure = 'acc'
+    performance_measure = 'MR'
 
     x_measure = 'm'
     y_measure = 'noise_spread'
