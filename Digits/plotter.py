@@ -2,7 +2,6 @@ import pickle as pkl
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
 
@@ -25,7 +24,8 @@ if __name__ == '__main__':
 
     x_measure = 'knn_k'
     y_measure = 'noise_spread'
-    # z_measure = 'm' # Only use this if you want the z-axis to be another parameter
+    # Only use this if you want the z-measure to be another parameter
+    # z_measure = 'm'
     # To include all data use alpha 0 as omitted set
     omitted_measure = 'alpha'
     omitted_target = 0
@@ -70,13 +70,17 @@ if __name__ == '__main__':
 
     ax.set_xlabel(measure_names[x_measure])
     ax.set_ylabel(measure_names[y_measure])
-    ax.set_zlabel(f'Performance ({measure_names[performance_measure]})', labelpad=20)
+    ax.set_zlabel(f'Performance ({measure_names[performance_measure]})',
+                  labelpad=20)
     # ax.set_zlabel(measure_names[z_measure])
-    cbar = fig.colorbar(plot, orientation="horizontal", label=f'Performance ({measure_names[performance_measure]})')
+    cbar = fig.colorbar(plot, orientation="horizontal",
+                        label=f'Performance ('
+                              f'{measure_names[performance_measure]})')
 
     if omitted_measure != 'alpha':
         plt.title("Misclassification rates for "
-                  + measure_names[omitted_measure] + " = " + str(omitted_target))
+                  + measure_names[omitted_measure] +
+                  " = " + str(omitted_target))
     else:
         plt.title("Misclassification rates for KNN")
 
