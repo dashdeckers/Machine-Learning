@@ -1,16 +1,20 @@
 import pickle as pkl
 
-import numpy as np
-import scipy.linalg  # type: ignore
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.linalg  # type: ignore
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
 
 def fit_plane(x, y, z, order=2):
+    x_start, x_stop = min(x), max(x) + 1
+    y_start, y_stop = min(y), max(y) + 0.1
+
     data = np.c_[x, y, z]
     # regular grid covering the domain of the data
-    X, Y = np.meshgrid(np.arange(20, 51, 0.5), np.arange(0, 3.1, 0.5))
+    X, Y = np.meshgrid(np.arange(x_start, x_stop, 0.5),
+                       np.arange(y_start, y_stop, 0.5))
     XX = X.flatten()
     YY = Y.flatten()
 
