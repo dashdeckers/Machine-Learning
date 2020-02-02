@@ -39,11 +39,11 @@ experiment2 = {
 }
 
 experiment3 = {
-    'algorithms': ['rosenblatt', 'minover', 'adatron'],
+    'algorithms': ['minover', 'adatron'],
     'alphaset': np.arange(0.25, 6.25, 0.75),
     'dimensions': [5, 20, 150],
     'repetitions': 40,
-    't_max': 100,
+    't_max': 30,
     'clamped': [False],
     'use_teacher': [True],
 
@@ -59,6 +59,8 @@ def get_label_and_vals(tup_list, experiment, algorithm):
 
     For each combination of clamped and use_teacher in [True, False],
     return a list of tuples that are ready to plot with.
+
+    tup = (N, alpha, Pa / repetitions, clamped, use_teacher, algorithm)
     """
     clamped = experiment['clamped']
     use_teacher = experiment['use_teacher']
@@ -66,25 +68,25 @@ def get_label_and_vals(tup_list, experiment, algorithm):
 
     out = list()
     if True in clamped and True in use_teacher:
-        label = f'N={N}, clamped, teacher labels ({algorithm})'
+        label = f'N={N}, clamped+teacher ({algorithm})'
         prob_vals = [tup[2] for tup in tup_list
                      if tup[3] and tup[4] and tup[5] == algorithm]
         out.append((label, prob_vals))
 
     if True in clamped and False in use_teacher:
-        label = f'N={N}, clamped, random labels ({algorithm})'
+        label = f'N={N}, clamped+random ({algorithm})'
         prob_vals = [tup[2] for tup in tup_list
                      if tup[3] and not tup[4] and tup[5] == algorithm]
         out.append((label, prob_vals))
 
     if False in clamped and True in use_teacher:
-        label = f'N={N}, not clamped, teacher labels ({algorithm})'
+        label = f'N={N}, teacher ({algorithm})'
         prob_vals = [tup[2] for tup in tup_list
                      if not tup[3] and tup[4] and tup[5] == algorithm]
         out.append((label, prob_vals))
 
     if False in clamped and False in use_teacher:
-        label = f'N={N}, not clamped, random labels ({algorithm})'
+        label = f'N={N}, random ({algorithm})'
         prob_vals = [tup[2] for tup in tup_list
                      if not tup[3] and not tup[4] and tup[5] == algorithm]
         out.append((label, prob_vals))

@@ -1,48 +1,67 @@
 import pickle as pkl
-import numpy as np
+
 import matplotlib.pyplot as plt
-import matplotlib
-from mpl_toolkits.mplot3d import Axes3D
-from sklearn.preprocessing import normalize
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D  # noqa
 
 if __name__ == '__main__':
+
     with open('KNN_fullsweep', 'rb') as f:
         data = pkl.load(f)
 
+    """
+    data = [datapoint]
+    datapoint = (params, results)
+    params = {'param': value}
+    results = [single_result]
+    single_result = {'measure': value}
+    """
+
+    # Set the performance measure to plot.
+    # Can be one of: ['prec', 'rec', 'F1', 'acc', 'MR']
+    performance_measure = 'MR'
+
     x_measure = 'noise_spread'
     y_measure = 'm'
-    omitted_measure = 'alpha'
-    omitted_target = 0
+    omitted_measure = 'knn_k'
+    omitted_target = 5
 
-    results_set = np.zeros((len(data), 3))
-    MR_means = []
-    for i, datapoint in enumerate(data):
-        if datapoint[0][omitted_measure] == omitted_target or omitted_measure == None:
-            mean = 0
-            for i in range(0, len(datapoint[1])):
-                mean += datapoint[1][i]['MR']
-            mean /= len(datapoint[1])
-            MR_means.append(mean)
+    # Aggregate the performance results together:
+    # Each datapoint has a list of results (k results from k-fold cross-val)
+    if performance_measure in ['F1', 'prec', 'rec']:
+        # These results come in pairs of (mean, std), we only want the mean
+        res_list = [[res[performance_measure][0]
+                     for res in dp[1]] for dp in data
+                    if dp[0][omitted_measure] == omitted_target]
+    else:
+        # The other results are simple values
+        res_list = [[res[performance_measure]
+                     for res in dp[1]] for dp in data
+                    if dp[0][omitted_measure] == omitted_target]
 
-    x = [datapoint[0][x_measure] for datapoint in data if datapoint[0][omitted_measure] == omitted_target]
-    y = [datapoint[0][y_measure] for datapoint in data if datapoint[0][omitted_measure] == omitted_target]
-    z = MR_means
+    # Plot the noise spread and the PCA-m on the x- and y- axes
+    x = [dp[0][x_measure] for dp in data
+         if dp[0][omitted_measure] == omitted_target]
+    y = [dp[0][y_measure] for dp in data
+         if dp[0][omitted_measure] == omitted_target]
 
-    # plt.scatter(x, y, c=z)
+    # Take the mean of each list of results to plot on the z-axis
+    z = [sum(results) / len(results) for results in res_list]
 
+    # Plot the results
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
+
     ax.scatter(x, y, z, c=np.negative(z))
+
     ax.set_xlabel(x_measure)
     ax.set_ylabel(y_measure)
-    ax.set_zlabel('Misclassification rate')
-    plt.title("Misclassification rates for " +omitted_measure + " = " + str(omitted_target))
+    ax.set_zlabel(f'Performance ({performance_measure})')
 
-    # ax = fig.add_subplot(111)
-    # ax.scatter(x, y, c=np.negative(z))
-    # ax.set_xlabel("Variance of noise")
-    # ax.set_ylabel("Number of principle components")
-    # #ax.set_ylabel("Misclassficiation rate")
-    # plt.title("Misclassification rates for Linear Regression with different numbers of principle components and levels of noise")
+    if omitted_measure != 'alpha':
+        plt.title("Misclassification rates for "
+                  + omitted_measure + " = " + str(omitted_target))
+    else:
+        plt.title("Misclassification rates")
 
-plt.show()
+    plt.show()
