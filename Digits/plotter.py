@@ -4,10 +4,18 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
-
 if __name__ == '__main__':
-    with open('LR_m70', 'rb') as f:
+
+    filename = 'LR_m70'
+    with open(filename, 'rb') as f:
         data = pkl.load(f)
+
+    if filename.startswith('KNN'):
+        classifier = 'K-Nearest-Neighbors'
+    elif filename.startswith('LR'):
+        classifier = 'Linear Regression'
+    else:
+        classifier = 'Other'
 
     """
     data = [datapoint]
@@ -19,9 +27,9 @@ if __name__ == '__main__':
 
     # Set the performance measure to plot.
     # Can be one of: ['prec', 'rec', 'F1', 'acc', 'MR']
-    performance_measure = 'MR'
+    performance_measure = 'acc'
 
-    x_measure = 'knn_k'
+    x_measure = 'm'
     y_measure = 'noise_spread'
     # Only use this if you want the z-measure to be another parameter
     # z_measure = 'm'
@@ -65,6 +73,8 @@ if __name__ == '__main__':
         "m": "Number of principle components",
         "knn_k": "Number of neighbors (k)",
         "MR": "Misclassification rate",
+        "F1": "F1-score",
+        "acc": "Accuracy",
     }
 
     ax.set_xlabel(measure_names[x_measure])
@@ -81,6 +91,6 @@ if __name__ == '__main__':
                   + measure_names[omitted_measure] +
                   " = " + str(omitted_target))
     else:
-        plt.title("Misclassification rates for KNN")
+        plt.title(f"Performance of {classifier}")
 
     plt.show()
