@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     x_measure = 'knn_k'
     y_measure = 'noise_spread'
-    z_measure = 'm'
+    # z_measure = 'm' # Only use this if you want the z-axis to be another parameter
     # To include all data use alpha 0 as omitted set
     omitted_measure = 'alpha'
     omitted_target = 0
@@ -48,8 +48,8 @@ if __name__ == '__main__':
          if dp[0][omitted_measure] == omitted_target]
     y = [dp[0][y_measure] for dp in data
          if dp[0][omitted_measure] == omitted_target]
-    z = [dp[0][z_measure] for dp in data
-         if dp[0][omitted_measure] == omitted_target]
+    # z = [dp[0][z_measure] for dp in data
+    #      if dp[0][omitted_measure] == omitted_target]
 
     # Take the mean of each list of results to plot on the z-axis
     p = [sum(results) / len(results) for results in res_list]
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     ax = fig.add_subplot(111, projection='3d')
 
     cmap = mpl.cm.get_cmap('jet_r')
-    plot = ax.scatter(x, y, z, c=p, cmap=cmap)
+    plot = ax.scatter(x, y, p, c=p, cmap=cmap)
 
     measure_names = {
         "noise_spread": "Variance of noise",
@@ -70,8 +70,8 @@ if __name__ == '__main__':
 
     ax.set_xlabel(measure_names[x_measure])
     ax.set_ylabel(measure_names[y_measure])
-    # ax.set_zlabel(f'Performance ({measure_names[performance_measure]})', labelpad=20)
-    ax.set_zlabel(measure_names[z_measure])
+    ax.set_zlabel(f'Performance ({measure_names[performance_measure]})', labelpad=20)
+    # ax.set_zlabel(measure_names[z_measure])
     cbar = fig.colorbar(plot, orientation="horizontal", label=f'Performance ({measure_names[performance_measure]})')
 
     if omitted_measure != 'alpha':
