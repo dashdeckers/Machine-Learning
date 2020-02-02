@@ -212,7 +212,6 @@ experiment_LR = {
     })),
 }
 
-
 baby_experiment = {
     # Set the classifier name (must be one of {'LR', 'KNN'})
     'classifier': 'KNN',
