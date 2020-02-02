@@ -37,6 +37,7 @@ def fit_plane(x, y, z, order=2):
                          XX**2, YY**2], C).reshape(X.shape)
     return X, Y, Z
 
+
 def K_planes(data):
     # Set the performance measure to plot.
     # Can be one of: ['prec', 'rec', 'F1', 'acc', 'MR']
@@ -53,13 +54,10 @@ def K_planes(data):
 
     fakeLegendLines = []
     colours = ['r', 'g', 'b', 'y']
-    for c, omitted_target in enumerate(range(3,11,2)):
-        # omitted_target = 9
+    for c, omitted_target in enumerate(range(3, 11, 2)):
 
         # Aggregate the performance results together:
-        # Each datapoint has a list of results (k results from k-fold cross-val)
         if performance_measure in ['F1', 'prec', 'rec']:
-            # These results come in pairs of (mean, std), we only want the mean
             res_list = [[res[performance_measure][0]
                          for res in dp[1]] for dp in data
                         if dp[0][omitted_measure] == omitted_target]
@@ -84,12 +82,11 @@ def K_planes(data):
 
         # Plot the results
 
-        ax.plot_surface(X, Y, Z, rstride=1, cstride=1, alpha=0.5, color=colours[c])
-
-
-        cmap = mpl.cm.get_cmap('jet_r')
-        # plot = ax.scatter(x, y, p, cmap=cmap)
-        fakeLegendLines.append(mpl.lines.Line2D([0],[0], linestyle="none", c=colours[c], marker='o'))
+        ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                        alpha=0.5, color=colours[c])
+        fakeLegendLines.append(
+            mpl.lines.Line2D([0], [0], linestyle="none",
+                             c=colours[c], marker='o'))
 
     measure_names = {
         "noise_spread": "Variance of noise",
@@ -102,10 +99,6 @@ def K_planes(data):
     ax.set_ylabel(measure_names[y_measure])
     ax.set_zlabel(f'Performance ({measure_names[performance_measure]})',
                   labelpad=20)
-    # ax.set_zlabel(measure_names[z_measure])
-    # cbar = fig.colorbar(plot, orientation="horizontal",
-    #                     label=f'Performance ('
-    #                           f'{measure_names[performance_measure]})')
 
     if omitted_measure != 'alpha' and False:
         plt.title("Misclassification rates for "
@@ -113,9 +106,6 @@ def K_planes(data):
                   " = " + str(omitted_target))
     else:
         plt.title("Misclassification rates for KNN")
-
-
-
     ax.legend(fakeLegendLines, ['k=3', 'k=5', 'k=7', 'k=9'])
     plt.show()
 
@@ -143,10 +133,6 @@ if __name__ == '__main__':
     # z_measure = 'm'
     # To include all data use alpha 0 as omitted set
     omitted_measure = 'knn_k'
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-
     omitted_target = 9
 
     # Aggregate the performance results together:
@@ -174,7 +160,8 @@ if __name__ == '__main__':
     p = [sum(results) / len(results) for results in res_list]
 
     X, Y, Z = fit_plane(x, y, p, 2)
-
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
     # Plot the results
     ax.plot_surface(X, Y, Z, rstride=1, cstride=1, alpha=0.5)
 
