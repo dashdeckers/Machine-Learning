@@ -199,7 +199,8 @@ def executePL(arg):
     (param_set, data, labels, pipeline) = arg
     print(param_set['m'])
     pipeline.set_params(pca__n_components=param_set['m'])
-    pipeline.set_params(LR__alpha=param_set['alpha'])
+    # pipeline.set_params(LR__alpha=param_set['alpha'])
+    pipeline.set_params(knn__n_neighbors=param_set['knn_k'])
 
     perf = cross_val(pipeline, data, labels,
                      noise_spread=param_set['noise_spread'],
@@ -208,7 +209,7 @@ def executePL(arg):
 
 
 def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0],
-                   noise_spread=[0], noise_copies=[1]):
+                   noise_spread=[0], noise_copies=[1], knn_k=5):
     """Perform a parameter sweep on the Linear Regression pipeline.
 
     Pass in the full dataset and labels, and specify which parameters
@@ -221,6 +222,7 @@ def param_sweep_LR(pipeline, data, labels, m_vals=[33], alphas=[0],
         'alpha': alphas,
         'noise_spread': noise_spread,
         'noise_copies': noise_copies,
+        'knn_k': knn_k,
     }))
 
     pool = mp.Pool(mp.cpu_count())
@@ -250,19 +252,23 @@ def do_everything():
     pipeline = Pipeline([
         ('normalize', StandardScaler()),
         ('pca', PCA()),
-        ('LR', RidgeClassifier()),
+        ('knn', KNeighborsClassifier()),
     ])
 
     m_vals = list(range(20, 51))
     noise_spread = np.arange(0, 3.25, 0.25)
     copies = [10]
-    # knn_k = list(range(3, 11, 2))
+    knn_k = list(range(3, 11, 2))
+
+    # m_vals = list(range(30,40,2))
+    # noise_spread = np.arange(0.5,1.5, 0.5)
+    # knn_k = list(range(3,7,2))
 
     # Do paramsweep with cross validation
     resultsLR = param_sweep_LR(pipeline, data, labels, m_vals,
-                               noise_spread=noise_spread, noise_copies=copies)
+                               noise_spread=noise_spread, noise_copies=copies, knn_k=knn_k)
     # resultsLR = param_sweep_LR(pipeline, data, labels)
-    with open('resultsLR', 'wb') as f:
+    with open('resultsKNN', 'wb') as f:
         pkl.dump(resultsLR, f)
 
     return resultsLR
