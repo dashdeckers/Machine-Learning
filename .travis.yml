@@ -8,10 +8,17 @@ cache:
   - pip
 
 install:
-  - pip install -r Digits/requirements.txt
   - pip install mypy flake8 pydocstyle
 
 script:
-  - mypy Digits/. NeuralNetworks/. DeepLearning/.
-  - flake8 Digits/. NeuralNetworks/. DeepLearning/.
-  - pydocstyle Digits/. NeuralNetworks/. DeepLearning/.
+  - mypy 'Machine Learning/Project Digits/.' 
+  - mypy 'Neural Networks/.'
+  - mypy 'Deep Learning/.'
+
+  - flake8 'Machine Learning/Project Digits/.' 
+  - flake8 'Neural Networks/.'
+  - flake8 'Deep Learning/.'
+
+  - pydocstyle 'Machine Learning/Project Digits/.' 
+  - pydocstyle 'Neural Networks/.'
+  - pydocstyle 'Deep Learning/.'
