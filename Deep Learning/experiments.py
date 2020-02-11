@@ -72,19 +72,19 @@ AlexNet = [
     Dense(units=4096,
           input_shape=(224*224*3,),
           activation='relu'),
-    Dropout(rate=0.4,
+    Dropout(rate=0.5,
             seed=seed+1),
 
     # 2nd Fully Connected Layer
     Dense(units=4096,
           activation='relu'),
-    Dropout(rate=0.4,
+    Dropout(rate=0.5,
             seed=seed+2),
 
     # 3rd Fully Connected Layer
     Dense(units=4096,
           activation='relu'),
-    Dropout(rate=0.4,
+    Dropout(rate=0.5,
             seed=seed+3),
 
     # Output Layer
