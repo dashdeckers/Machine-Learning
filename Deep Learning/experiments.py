@@ -13,7 +13,7 @@ standard_experiment = {
 # Define models
 small_model = [
     Conv2D(filters=96,
-           input_shape=(32, 32, 3),
+           input_shape=(224, 224, 3),
            kernel_size=(2, 2),
            strides=(1, 1),
            padding='same',
