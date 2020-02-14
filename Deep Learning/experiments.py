@@ -92,6 +92,50 @@ AlexNet = [
           activation='softmax')
 ]
 
+# Keras CNN model
+# https://keras.io/examples/cifar10_cnn/
+cnn = [
+    # First group
+    Conv2D(filters=32,
+           input_shape=(32, 32, 3),
+           kernel_size=(3, 3),
+           padding='same',
+           activation='relu',
+           ),
+    Conv2D(filters=32,
+           kernel_size=(3, 3),
+           padding='valid',
+           activation='relu',
+           ),
+    MaxPooling2D(
+        pool_size=(2, 2),
+        stride=(1, 1)),
+    Dropout(0.25),
+
+    # Second group
+    Conv2D(filters=64,
+           kernel_size=(3, 3),
+           padding='same',
+           activation='relu',
+           ),
+    Conv2D(filters=64,
+           kernel_size=(3, 3),
+           padding='valid',
+           activation='relu',
+           ),
+    MaxPooling2D(
+        pool_size=(2, 2),
+        stride=(1, 1)),
+    Dropout(0.25),
+
+    # Dense
+    Flatten(),
+    Dense(512, activation='relu'),
+    Dropout(0.5),
+
+    Dense(10, activation='softmax'),
+]
+
 small_model = [
     Conv2D(filters=96,
            input_shape=(224, 224, 3),
