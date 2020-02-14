@@ -1,12 +1,65 @@
 # import numpy as np
+import argparse
 import datetime
 
 import tensorflow as tf
-from experiments import (AlexNet, minimal_model, small_model,  # noqa
+from experiments import (AlexNet, minimal_model, options, small_model,  # noqa
                          standard_experiment)
 from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
+
+parser = argparse.ArgumentParser(description='Deep Learning with CIFAR10')
+parser.add_argument(
+    'name',
+    type=str,
+    help='an appropriate name to record the logs to'
+)
+parser.add_argument(
+    '--opt',
+    default=options['optimizers'][0],
+    choices=options['optimizers'],
+    type=str,
+    help='the optimizer to use (default: %(default)s)'
+)
+parser.add_argument(
+    '--loss',
+    default=options['losses'][0],
+    choices=options['losses'],
+    type=str,
+    help='the loss to minimize (default: %(default)s)'
+)
+parser.add_argument(
+    '--model',
+    default=options['models'][0],
+    choices=options['models'],
+    type=str,
+    help='the model architecture to use (default: %(default)s)'
+)
+parser.add_argument(
+    '--activation',
+    default=options['activations'][0],
+    choices=options['activations'],
+    type=str,
+    help='the activation function to use (default: %(default)s)'
+)
+parser.add_argument(
+    '--dropout',
+    default=options['dropouts'][0],
+    choices=options['dropouts'],
+    type=str,
+    help='the dropout probability (default: %(default)s)'
+)
+parser.add_argument(
+    '--epochs',
+    default=50,
+    type=int,
+    help='the number of epochs to run for (integer, default: %(default)s)'
+)
+
+args = parser.parse_args()
+print(args)
+
 
 # TensorBoard stuff
 logdir = "logs/" + datetime.datetime.now().strftime("%d-%m %H:%M:%S")
@@ -56,4 +109,5 @@ def run_experiment(experiment, model, verbose=1):
 
 
 if __name__ == '__main__':
-    run_experiment(standard_experiment, small_model)
+    pass
+    # run_experiment(standard_experiment, small_model)

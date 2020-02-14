@@ -6,6 +6,14 @@ from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten,
 seed = 1000
 np.random.seed(seed)
 
+options = {
+    'losses': ['categorical_crossentropy'],
+    'optimizers': ['adam'],
+    'models': ['cnn', 'short_cnn', 'long_cnn', 'small_model', 'minimal_model'],
+    'activations': ['relu', 'linear', 'sigmoid', 'elu', 'softplus', 'selu'],
+    'dropouts': ['none', 'medium', 'high'],
+}
+
 # Define experiments
 standard_experiment = {
     'loss': 'categorical_crossentropy',
