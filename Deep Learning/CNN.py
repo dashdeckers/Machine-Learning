@@ -13,6 +13,7 @@ logdir = "logs/" + datetime.datetime.now().strftime("%d-%m %H:%M:%S")
 tensorboard = tf.keras.callbacks.TensorBoard(
     log_dir=logdir,
     histogram_freq=1,
+    profile_batch=0,
 )
 
 
