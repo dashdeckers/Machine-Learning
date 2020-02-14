@@ -6,38 +6,19 @@ from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten,
 seed = 1000
 np.random.seed(seed)
 
+# Define the valid options to choose from (can be keras objects or strings)
 options = {
     'losses': ['categorical_crossentropy'],
     'optimizers': ['adam'],
-    'models': ['cnn', 'short_cnn', 'long_cnn', 'small_model', 'minimal_model'],
+    'architectures': ['cnn', 'short_cnn', 'long_cnn', 'small_model',
+                      'minimal_model'],
     'activations': ['relu', 'linear', 'sigmoid', 'elu', 'softplus', 'selu'],
     'dropouts': ['none', 'medium', 'high'],
 }
 
-def build_experiment(
-            loss='categorical_crossentropy',
-            optimizer='adam',
-            metrics=['accuracy'],
-            batch_size=64,
-            epochs=50
-        ):
-    return {
-        'loss': loss,
-        'optimizer': optimizer,
-        'metrics': metrics,
-        'batch_size': batch_size,
-        'epochs': epochs,
-    }
-
 
 def build_model(architecture='cnn', dropout='medium', activation='relu'):
-    # Valid architectures are:
-        # 'cnn', 'short cnn', 'long cnn', 'small model' & 'minimal model'
-    # Valid dropouts are:
-        # 'none', 'medium', and 'high'
-    # Valid activations are:
-        # 'relu', 'elu', 'selu', 'linear', 'softplus', 'sigmoid'
-
+    """Build and return a model."""
     if dropout == 'medium':
         conv_drop = 0.25
         dense_drop = 0.5
