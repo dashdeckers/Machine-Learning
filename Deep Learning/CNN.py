@@ -3,8 +3,7 @@ import datetime
 import os
 
 import tensorflow as tf
-from experiments import build_model  # noqa
-from experiments import standard_experiment
+from experiments import build_experiment, build_model
 from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
@@ -53,4 +52,4 @@ def run_experiment(experiment, model, verbose=1):
 
 
 if __name__ == '__main__':
-    run_experiment(standard_experiment, build_model(dropout='none'))
+    run_experiment(build_experiment(), build_model(dropout='none'))

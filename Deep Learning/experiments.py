@@ -6,14 +6,21 @@ from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten,
 seed = 1000
 np.random.seed(seed)
 
-# Define experiments
-standard_experiment = {
-    'loss': 'categorical_crossentropy',
-    'optimizer': 'adam',
-    'metrics': ['accuracy'],
-    'batch_size': 64,
-    'epochs': 50,
-}
+
+def build_experiment(
+            loss='categorical_crossentropy',
+            optimizer='adam',
+            metrics=['accuracy'],
+            batch_size=64,
+            epochs=50
+        ):
+    return {
+        'loss': loss,
+        'optimizer': optimizer,
+        'metrics': metrics,
+        'batch_size': batch_size,
+        'epochs': epochs,
+    }
 
 
 def build_model(architecture='cnn', dropout='medium', activation='relu'):
