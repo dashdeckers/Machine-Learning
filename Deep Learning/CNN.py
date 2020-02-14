@@ -3,7 +3,7 @@ import datetime
 import os
 
 import tensorflow as tf
-from experiments import (AlexNet, minimal_model, small_model,  # noqa
+from experiments import (cnn, minimal_model, small_model,  # noqa
                          standard_experiment)
 from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.models import Sequential

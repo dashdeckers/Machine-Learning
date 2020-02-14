@@ -113,7 +113,7 @@ cnn = [
            ),
     MaxPooling2D(
         pool_size=(2, 2),
-        stride=(1, 1)),
+        strides=(1, 1)),
     Dropout(0.25,
             seed=seed+1),
 
@@ -130,7 +130,7 @@ cnn = [
            ),
     MaxPooling2D(
         pool_size=(2, 2),
-        stride=(1, 1)),
+        strides=(1, 1)),
     Dropout(0.25,
             seed=seed+2),
 
@@ -160,7 +160,7 @@ cnn_no_dropout = [
            ),
     MaxPooling2D(
         pool_size=(2, 2),
-        stride=(1, 1)),
+        strides=(1, 1)),
 
     # Second group
     Conv2D(filters=64,
@@ -175,7 +175,7 @@ cnn_no_dropout = [
            ),
     MaxPooling2D(
         pool_size=(2, 2),
-        stride=(1, 1)),
+        strides=(1, 1)),
 
     # Dense
     Flatten(),
@@ -201,7 +201,7 @@ cnn_high_dropout = [
            ),
     MaxPooling2D(
         pool_size=(2, 2),
-        stride=(1, 1)),
+        strides=(1, 1)),
     Dropout(0.5,
             seed=seed+1),
 
@@ -218,7 +218,7 @@ cnn_high_dropout = [
            ),
     MaxPooling2D(
         pool_size=(2, 2),
-        stride=(1, 1)),
+        strides=(1, 1)),
     Dropout(0.5,
             seed=seed+2),
 
