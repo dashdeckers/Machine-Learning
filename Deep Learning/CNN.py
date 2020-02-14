@@ -56,3 +56,4 @@ def run_experiment(experiment, model, verbose=1):
 
 if __name__ == '__main__':
     run_experiment(build_experiment(), build_model(dropout='none'))
+1
