@@ -1,0 +1,7 @@
+
+Weight decay
+	kernel_regularizer=l2(0.01)		+1 		
+Different CNN shapes				2	
+Compare to shitty models			1	(small/minimal)
+Different activation functions		+2	(LeakyReLU, PReLU) +relu
+Different dropouts					+2	(none, high) + medium

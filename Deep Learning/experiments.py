@@ -14,114 +14,268 @@ options = {
     'dropouts': ['none', 'medium', 'high'],
 }
 
-# Define experiments
-standard_experiment = {
-    'loss': 'categorical_crossentropy',
-    'optimizer': 'adam',
-    'metrics': ['accuracy'],
-    'batch_size': 64,
-    'epochs': 10,
-}
+def build_experiment(
+            loss='categorical_crossentropy',
+            optimizer='adam',
+            metrics=['accuracy'],
+            batch_size=64,
+            epochs=50
+        ):
+    return {
+        'loss': loss,
+        'optimizer': optimizer,
+        'metrics': metrics,
+        'batch_size': batch_size,
+        'epochs': epochs,
+    }
 
 
-# Define models
-AlexNet = [
-    # 1st Conv Layer
-    Conv2D(filters=96,
-           input_shape=(224, 224, 3),
-           kernel_size=(11, 11),
-           strides=(4, 4),
-           padding='valid',
-           activation='relu'),
+def build_model(architecture='cnn', dropout='medium', activation='relu'):
+    # Valid architectures are:
+        # 'cnn', 'short cnn', 'long cnn', 'small model' & 'minimal model'
+    # Valid dropouts are:
+        # 'none', 'medium', and 'high'
+    # Valid activations are:
+        # 'relu', 'elu', 'selu', 'linear', 'softplus', 'sigmoid'
 
-    MaxPooling2D(pool_size=(3, 3),
-                 strides=(2, 2),
-                 padding='valid'),
+    if dropout == 'medium':
+        conv_drop = 0.25
+        dense_drop = 0.5
+    elif dropout == 'none':
+        conv_drop = 0
+        dense_drop = 0
+    elif dropout == 'high':
+        conv_drop = 0.5
+        dense_drop = 0.85
 
-    # 2nd Conv Layer
-    Conv2D(filters=256,
-           kernel_size=(5, 5),
-           strides=(1, 1),
-           padding='valid',
-           activation='relu'),
+    if architecture == 'cnn':
+        # Keras CNN model intended for CIFAR
+        # https://keras.io/examples/cifar10_cnn/
+        model = [
+            # First group
+            Conv2D(
+                filters=32,
+                input_shape=(32, 32, 3),
+                kernel_size=(3, 3),
+                padding='same',
+                activation=activation,
+            ),
+            Conv2D(
+                filters=32,
+                kernel_size=(3, 3),
+                padding='valid',
+                activation=activation,
+            ),
+            MaxPooling2D(
+                pool_size=(2, 2),
+                strides=(1, 1)
+            ),
+            Dropout(
+                conv_drop,
+                seed=seed+1
+            ),
 
-    MaxPooling2D(pool_size=(3, 3),
-                 strides=(2, 2),
-                 padding='valid'),
+            # Second group
+            Conv2D(
+                filters=64,
+                kernel_size=(3, 3),
+                padding='same',
+                activation=activation,
+            ),
+            Conv2D(
+                filters=64,
+                kernel_size=(3, 3),
+                padding='valid',
+                activation=activation,
+            ),
+            MaxPooling2D(
+                pool_size=(2, 2),
+                strides=(1, 1)
+            ),
+            Dropout(
+                conv_drop,
+                seed=seed+2
+            ),
 
-    # 3rd Conv Layer
-    Conv2D(filters=384,
-           kernel_size=(3, 3),
-           strides=(1, 1),
-           padding='valid',
-           activation='relu'),
+            # Dense
+            Flatten(),
+            Dense(
+                units=512,
+                activation=activation
+            ),
+            Dropout(
+                dense_drop,
+                seed=seed+3
+            ),
 
-    # 4th Conv Layer
-    Conv2D(filters=384,
-           kernel_size=(3, 3),
-           strides=(1, 1),
-           padding='valid',
-           activation='relu'),
+            Dense(
+                units=10,
+                activation='softmax'
+            ),
+        ]
+    if architecture == 'long cnn':
+        model = [
+            # First group
+            Conv2D(
+                filters=32,
+                input_shape=(32, 32, 3),
+                kernel_size=(3, 3),
+                padding='same',
+                activation=activation,
+            ),
+            MaxPooling2D(
+                pool_size=(2, 2),
+                strides=(1, 1)
+            ),
+            Dropout(
+                conv_drop,
+                seed=seed+1
+            ),
 
-    # 5th Conv Layer
-    Conv2D(filters=256,
-           kernel_size=(3, 3),
-           strides=(1, 1),
-           padding='valid',
-           activation='relu'),
+            # Second group
+            Conv2D(
+                filters=32,
+                kernel_size=(3, 3),
+                padding='valid',
+                activation=activation,
+            ),
+            MaxPooling2D(
+                pool_size=(2, 2),
+                strides=(1, 1)
+            ),
+            Dropout(
+                conv_drop,
+                seed=seed+1
+            ),
 
-    MaxPooling2D(pool_size=(3, 3),
-                 strides=(2, 2),
-                 padding='valid'),
+            # Third group
+            Conv2D(
+                filters=64,
+                kernel_size=(3, 3),
+                padding='same',
+                activation=activation,
+            ),
+            MaxPooling2D(
+                pool_size=(2, 2),
+                strides=(1, 1)
+            ),
+            Dropout(
+                conv_drop,
+                seed=seed+2
+            ),
 
-    # Flatten
-    Flatten(),
+            # Fourth group
+            Conv2D(
+                filters=64,
+                kernel_size=(3, 3),
+                padding='valid',
+                activation=activation,
+            ),
+            MaxPooling2D(
+                pool_size=(2, 2),
+                strides=(1, 1)
+            ),
+            Dropout(
+                conv_drop,
+                seed=seed+2
+            ),
 
-    # 1st Fully Connected Layer
-    Dense(units=4096,
-          input_shape=(224*224*3,),
-          activation='relu'),
-    Dropout(rate=0.5,
-            seed=seed+1),
+            # Dense
+            Flatten(),
+            Dense(
+                units=512,
+                activation=activation
+            ),
+            Dropout(
+                dense_drop,
+                seed=seed+3
+            ),
 
-    # 2nd Fully Connected Layer
-    Dense(units=4096,
-          activation='relu'),
-    Dropout(rate=0.5,
-            seed=seed+2),
+            Dense(
+                units=10,
+                activation='softmax'
+            ),
+        ]
+    if architecture == 'short cnn':
+        model = [
+            # First group
+            Conv2D(
+                filters=32,
+                input_shape=(32, 32, 3),
+                kernel_size=(3, 3),
+                padding='same',
+                activation=activation,
+            ),
+            Conv2D(
+                filters=32,
+                kernel_size=(3, 3),
+                padding='valid',
+                activation=activation,
+            ),
+            Conv2D(
+                filters=64,
+                kernel_size=(3, 3),
+                padding='same',
+                activation=activation,
+            ),
+            Conv2D(
+                filters=64,
+                kernel_size=(3, 3),
+                padding='valid',
+                activation=activation,
+            ),
+            MaxPooling2D(
+                pool_size=(2, 2),
+                strides=(1, 1)
+            ),
+            Dropout(
+                conv_drop,
+                seed=seed+2
+            ),
 
-    # 3rd Fully Connected Layer
-    Dense(units=4096,
-          activation='relu'),
-    Dropout(rate=0.5,
-            seed=seed+3),
+            # Dense
+            Flatten(),
+            Dense(
+                units=512,
+                activation=activation
+            ),
+            Dropout(
+                dense_drop,
+                seed=seed+3
+            ),
 
-    # Output Layer
-    Dense(units=10,
-          activation='softmax')
-]
-
-small_model = [
-    Conv2D(filters=96,
-           input_shape=(32, 32, 3),
-           kernel_size=(2, 2),
-           strides=(1, 1),
-           padding='same',
-           activation='relu'),
-
-    MaxPooling2D(pool_size=(2, 2),
-                 strides=(2, 2),
-                 padding='valid'),
-
-    Flatten(),
-
-    Dense(units=10,
-          activation='softmax')
-]
-
-minimal_model = [
-    Flatten(),
-
-    Dense(units=10,
-          activation='softmax')
-]
+            Dense(
+                units=10,
+                activation='softmax'
+            ),
+        ]
+    if architecture == 'small model':
+        model = [
+            Conv2D(
+                filters=96,
+                input_shape=(32, 32, 3),
+                kernel_size=(2, 2),
+                strides=(1, 1),
+                padding='same',
+                activation='relu'
+            ),
+            MaxPooling2D(
+                pool_size=(2, 2),
+                strides=(2, 2),
+                padding='valid'
+            ),
+            Flatten(),
+            Dense(
+                units=10,
+                activation='softmax'
+            ),
+        ]
+    if architecture == 'minimal model':
+        model = [
+            Flatten(),
+            Dense(
+                units=10,
+                activation='softmax'
+            )
+        ]
+    return model
