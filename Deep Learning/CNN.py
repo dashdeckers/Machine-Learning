@@ -1,43 +1,36 @@
 # import numpy as np
+import datetime
 import os
 
-import numpy as np
 import tensorflow as tf
-from experiments import minimal_model, small_model, standard_experiment  # noqa
-from keras.datasets import cifar10
-from keras.models import Sequential
-from keras.utils import Sequence, to_categorical
-from skimage.transform import resize
+from experiments import (AlexNet, minimal_model, small_model,  # noqa
+                         standard_experiment)
+from tensorflow.keras.datasets import cifar10
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.utils import to_categorical
 
-# Turn off Tensorflow Warnings
+# Turn off Tensorflow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
-
-class CIFAR10(Sequence):
-    def __init__(self, X, y, batch_size, preprocess=True, rescale=True):
-        self.X, self.y = X, y
-        self.rescale = rescale
-        self.batch_size = batch_size
-
-        if preprocess:
-            self.X = (X.astype('float32') / 255)
-            self.y = to_categorical(y, 10)
-
-    def __len__(self):
-        return int(np.ceil(len(self.X) / float(self.batch_size)))
-
-    def __getitem__(self, idx):
-        batch_x = self.X[idx * self.batch_size: (idx + 1) * self.batch_size]
-        batch_y = self.y[idx * self.batch_size: (idx + 1) * self.batch_size]
-
-        return (
-            np.array([resize(img, (224, 224)) for img in batch_x]),
-            np.array(batch_y)
-        )
+# TensorBoard stuff
+logdir = "logs/scalars/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir)
 
 
-(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+def load_data(preprocess=True):
+    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+
+    if preprocess:
+        x_train = x_train.astype('float32') / 255
+        x_test = x_test.astype('float32') / 255
+        y_train = to_categorical(y_train, 10)
+        y_test = to_categorical(y_test, 10)
+
+    return (x_train, y_train), (x_test, y_test)
+
+
+(x_train, y_train), (x_test, y_test) = load_data()
 
 
 def run_experiment(experiment, model, verbose=1):
@@ -48,22 +41,14 @@ def run_experiment(experiment, model, verbose=1):
     model.build(x_train.shape[1:])
     model.summary()
 
-    batch_size = experiment['batch_size']
+    model.fit(x=x_train,
+              y=y_train,
+              batch_size=experiment['batch_size'],
+              epochs=experiment['epochs'],
+              verbose=verbose,
+              validation_split=0.1,
+              callbacks=[tensorboard_callback])
 
-    train_generator = CIFAR10(x_train, y_train, batch_size=batch_size)
-    test_generator = CIFAR10(x_test, y_test, batch_size=batch_size)
-
-    model.fit_generator(train_generator,
-                        epochs=experiment['epochs'],
-                        verbose=verbose,
-                        validation_data=test_generator,
-                        workers=6,
-                        use_multiprocessing=True)
-
-    print(model.evaluate_generator(test_generator,
-                                   verbose=verbose,
-                                   workers=6,
-                                   use_multiprocessing=True))
     return model
 
 

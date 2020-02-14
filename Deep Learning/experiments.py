@@ -1,5 +1,6 @@
 import numpy as np
-from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
+from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten,
+                                     MaxPooling2D)
 
 # Seed the rng's for reproducible results
 seed = 1000
@@ -232,7 +233,7 @@ cnn_high_dropout = [
 
 small_model = [
     Conv2D(filters=96,
-           input_shape=(224, 224, 3),
+           input_shape=(32, 32, 3),
            kernel_size=(2, 2),
            strides=(1, 1),
            padding='same',
