@@ -16,6 +16,9 @@ standard_experiment = {
 
 
 # Define models
+
+# Original AlexNet model
+# Intended for 224x224 images, does not work with CIFARs 32x32
 AlexNet = [
     # 1st Conv Layer
     Conv2D(filters=96,
@@ -92,7 +95,7 @@ AlexNet = [
           activation='softmax')
 ]
 
-# Keras CNN model
+# Keras CNN model intended for CIFAR
 # https://keras.io/examples/cifar10_cnn/
 cnn = [
     # First group
@@ -110,7 +113,8 @@ cnn = [
     MaxPooling2D(
         pool_size=(2, 2),
         stride=(1, 1)),
-    Dropout(0.25),
+    Dropout(0.25,
+            seed=seed+1),
 
     # Second group
     Conv2D(filters=64,
@@ -126,12 +130,102 @@ cnn = [
     MaxPooling2D(
         pool_size=(2, 2),
         stride=(1, 1)),
-    Dropout(0.25),
+    Dropout(0.25,
+            seed=seed+2),
 
     # Dense
     Flatten(),
     Dense(512, activation='relu'),
-    Dropout(0.5),
+    Dropout(0.5,
+            seed=seed+3),
+
+    Dense(10, activation='softmax'),
+]
+
+# CNN model adapted to remove all dropout
+# Can be used to compare against cnn and cnn_high_dropout
+cnn_no_dropout = [
+    # First group
+    Conv2D(filters=32,
+           input_shape=(32, 32, 3),
+           kernel_size=(3, 3),
+           padding='same',
+           activation='relu',
+           ),
+    Conv2D(filters=32,
+           kernel_size=(3, 3),
+           padding='valid',
+           activation='relu',
+           ),
+    MaxPooling2D(
+        pool_size=(2, 2),
+        stride=(1, 1)),
+
+    # Second group
+    Conv2D(filters=64,
+           kernel_size=(3, 3),
+           padding='same',
+           activation='relu',
+           ),
+    Conv2D(filters=64,
+           kernel_size=(3, 3),
+           padding='valid',
+           activation='relu',
+           ),
+    MaxPooling2D(
+        pool_size=(2, 2),
+        stride=(1, 1)),
+
+    # Dense
+    Flatten(),
+    Dense(512, activation='relu'),
+    Dense(10, activation='softmax'),
+]
+
+
+# CNN model adapted to increase dropout
+# Can be used to compare against cnn and cnn_no_dropout
+cnn_high_dropout = [
+    # First group
+    Conv2D(filters=32,
+           input_shape=(32, 32, 3),
+           kernel_size=(3, 3),
+           padding='same',
+           activation='relu',
+           ),
+    Conv2D(filters=32,
+           kernel_size=(3, 3),
+           padding='valid',
+           activation='relu',
+           ),
+    MaxPooling2D(
+        pool_size=(2, 2),
+        stride=(1, 1)),
+    Dropout(0.5,
+            seed=seed+1),
+
+    # Second group
+    Conv2D(filters=64,
+           kernel_size=(3, 3),
+           padding='same',
+           activation='relu',
+           ),
+    Conv2D(filters=64,
+           kernel_size=(3, 3),
+           padding='valid',
+           activation='relu',
+           ),
+    MaxPooling2D(
+        pool_size=(2, 2),
+        stride=(1, 1)),
+    Dropout(0.5,
+            seed=seed+2),
+
+    # Dense
+    Flatten(),
+    Dense(512, activation='relu'),
+    Dropout(0.85,
+            seed=seed+3),
 
     Dense(10, activation='softmax'),
 ]
