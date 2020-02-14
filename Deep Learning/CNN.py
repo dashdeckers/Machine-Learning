@@ -1,6 +1,5 @@
 # import numpy as np
 import datetime
-import os
 
 import tensorflow as tf
 from experiments import (AlexNet, minimal_model, small_model,  # noqa
@@ -9,13 +8,12 @@ from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
 
-# Turn off Tensorflow warnings
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-
 # TensorBoard stuff
-logdir = "logs/scalars/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir)
+logdir = "logs/" + datetime.datetime.now().strftime("%d-%m %H:%M:%S")
+tensorboard = tf.keras.callbacks.TensorBoard(
+    log_dir=logdir,
+    histogram_freq=1,
+)
 
 
 def load_data(preprocess=True):
@@ -35,19 +33,23 @@ def load_data(preprocess=True):
 
 def run_experiment(experiment, model, verbose=1):
     model = Sequential(model)
-    model.compile(loss=experiment['loss'],
-                  optimizer=experiment['optimizer'],
-                  metrics=experiment['metrics'])
+    model.compile(
+        loss=experiment['loss'],
+        optimizer=experiment['optimizer'],
+        metrics=experiment['metrics']
+    )
     model.build(x_train.shape[1:])
     model.summary()
 
-    model.fit(x=x_train,
-              y=y_train,
-              batch_size=experiment['batch_size'],
-              epochs=experiment['epochs'],
-              verbose=verbose,
-              validation_split=0.1,
-              callbacks=[tensorboard_callback])
+    model.fit(
+        x=x_train,
+        y=y_train,
+        batch_size=experiment['batch_size'],
+        epochs=experiment['epochs'],
+        verbose=verbose,
+        validation_split=0.1,
+        callbacks=[tensorboard]
+    )
 
     return model
 
