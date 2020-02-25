@@ -107,7 +107,13 @@ def run_experiment(architecture, verbose=1):
         callbacks=[tensorboard]
     )
 
-    # HERE: evaluate the model on the lockboxed (x_test, y_test)
+    model.evaluate(
+        x=x_test,
+        y=y_test,
+        batch_size=32,
+        verbose=verbose,
+        callbacks=[tensorboard]
+    )
 
     return model
 
