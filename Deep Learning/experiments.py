@@ -9,7 +9,7 @@ np.random.seed(seed)
 # Define the valid options to choose from (can be keras objects or strings)
 options = {
     'losses': ['categorical_crossentropy'],
-    'optimizers': ['adam'],
+    'optimizers': ['adam', 'sgd', 'rmsprop', 'adadelta', 'nadam'],
     'architectures': ['cnn', 'short_cnn', 'long_cnn', 'small_model',
                       'minimal_model'],
     'activations': ['relu', 'linear', 'sigmoid', 'elu', 'softplus', 'selu'],
@@ -17,14 +17,14 @@ options = {
 }
 
 
-def build_model(architecture='cnn', dropout='medium', activation='relu'):
+def build_model(architecture, dropout, activation):
     """Build and return a model."""
-    if dropout == 'medium':
-        conv_drop = 0.25
-        dense_drop = 0.5
-    elif dropout == 'none':
+    if dropout == 'none':
         conv_drop = 0
         dense_drop = 0
+    elif dropout == 'medium':
+        conv_drop = 0.25
+        dense_drop = 0.5
     elif dropout == 'high':
         conv_drop = 0.5
         dense_drop = 0.85
