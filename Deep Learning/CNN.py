@@ -54,7 +54,7 @@ parser.add_argument(
 )
 parser.add_argument(
     '--epochs',
-    default=50,
+    default=20,
     type=int,
 )
 args = parser.parse_args()

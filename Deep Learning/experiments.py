@@ -94,7 +94,7 @@ def build_model(architecture='cnn', dropout='medium', activation='relu'):
                 activation='softmax'
             ),
         ]
-    if architecture == 'long cnn':
+    if architecture == 'long_cnn':
         model = [
             # First group
             Conv2D(
@@ -177,7 +177,7 @@ def build_model(architecture='cnn', dropout='medium', activation='relu'):
                 activation='softmax'
             ),
         ]
-    if architecture == 'short cnn':
+    if architecture == 'short_cnn':
         model = [
             # First group
             Conv2D(
@@ -230,7 +230,7 @@ def build_model(architecture='cnn', dropout='medium', activation='relu'):
                 activation='softmax'
             ),
         ]
-    if architecture == 'small model':
+    if architecture == 'small_model':
         model = [
             Conv2D(
                 filters=96,
