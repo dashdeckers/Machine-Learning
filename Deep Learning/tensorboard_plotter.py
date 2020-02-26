@@ -1,8 +1,11 @@
 import os
 from typing import List, Tuple
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from tensorflow.python.summary.summary_iterator import summary_iterator
+
+mpl.style.use('seaborn')
 
 # Type annotations, because this is cool now
 Scalars = List[float]
@@ -37,13 +40,19 @@ for dirpath, dirnames, filenames in os.walk('logs'):
 
         data.append((name, metric_type, accs, cat_accs))
 
+# List the possible runs
+activations = {'baseline', 'elu', 'linear', 'sigmoid', 'softplus'}
+optimizers = {'baseline', 'sgd', 'rmsprop', 'adadelta'}
+architectures = {'baseline', 'short_cnn', 'long_cnn', 'small_model'}
+dropouts = {'baseline', 'none', 'high'}
+
 # Plot the data
 n_epochs = 20
-metric_type = 'validation'
 for tup in data:
-    if tup[1] == metric_type:
-        # Set plotted data tup[3] if you want categorical accuracy
-        # You can add {tup[1]} to label if you're plotting both train and val
-        plt.plot(range(n_epochs), tup[2], label=f'{tup[0]}')
+    name = tup[0].split('_')[1]
+
+    if name in activations:
+        plt.plot(range(n_epochs), tup[2], label=f'{tup[0]} {tup[1]}')
+
 plt.legend()
 plt.show()
