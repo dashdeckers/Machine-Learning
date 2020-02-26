@@ -31,7 +31,7 @@ for dirpath, dirnames, filenames in os.walk('logs'):
         cat_accs: Scalars = list()
         for event in iterator:
             for value in event.summary.value:
-                # print(value.tag)
+                print(value.tag)
                 # 'epoch_loss' is also an available tag name
                 if value.tag == 'epoch_accuracy':
                     accs.append(value.simple_value)
@@ -49,7 +49,10 @@ dropouts = {'baseline', 'none', 'high'}
 # Plot the data
 n_epochs = 20
 for tup in data:
-    name = tup[0].split('_')[1]
+    if tup[0] == 'baseline':
+        name = 'baseline'
+    else:
+        name = tup[0].split('_')[1]
 
     if name in activations:
         plt.plot(range(n_epochs), tup[2], label=f'{tup[0]} {tup[1]}')
