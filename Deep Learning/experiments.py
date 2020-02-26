@@ -16,6 +16,15 @@ options = {
     'dropouts': ['none', 'medium', 'high'],
 }
 
+"""
+Baseline:
+Loss=categorical_crossentropy
+Optimizer=Adam,
+Architecture=cnn,
+Activation=ReLu,
+Dropout=Medium,
+"""
+
 
 def build_model(architecture, dropout, activation):
     """Build and return a model."""
