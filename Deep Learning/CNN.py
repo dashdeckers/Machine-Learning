@@ -5,7 +5,7 @@ import tensorflow as tf
 from experiments import build_model, options
 from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.utils import plot_model, to_categorical
 
 # Argument Parsing
 parser = argparse.ArgumentParser(
@@ -97,6 +97,8 @@ def run_experiment(architecture, verbose=1):
     model.build(x_train.shape[1:])
     model.summary()
 
+    plot_model(model, to_file=f'models/{args.name}.png')
+
     model.fit(
         x=x_train,
         y=y_train,
@@ -114,6 +116,8 @@ def run_experiment(architecture, verbose=1):
         verbose=verbose,
         callbacks=[tensorboard]
     )
+
+    model.save(f'models/{args.name}.h5')
 
     return model
 
