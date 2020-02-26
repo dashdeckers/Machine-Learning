@@ -13,7 +13,7 @@ options = {
     'architectures': ['cnn', 'short_cnn', 'long_cnn', 'small_model',
                       'minimal_model'],
     'activations': ['relu', 'linear', 'sigmoid', 'elu', 'softplus', 'selu'],
-    'dropouts': ['none', 'medium', 'high'],
+    'dropouts': ['medium', 'none', 'high'],
 }
 
 """
