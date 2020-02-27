@@ -52,7 +52,7 @@ for tup in data:
     if tup[0] == 'baseline':
         name = 'baseline'
     else:
-        name = tup[0].split('_')[1]
+        name = ''.join(tup[0].split('_')[1:])
 
     if name in activations:
         plt.plot(range(n_epochs), tup[2], label=f'{tup[0]} {tup[1]}')

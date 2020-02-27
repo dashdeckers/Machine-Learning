@@ -15,9 +15,9 @@ python CNN.py --optimizer rmsprop   opt_rmsprop
 python CNN.py --optimizer adadelta  opt_adadelta
 
 # Architectures in {'short_cnn', 'long_cnn', 'small_model'}
-python CNN.py --architecture short_cnn  arch_short
-python CNN.py --architecture long_cnn   arch_long
-python CNN.py --architecture small_cnn  arch_small
+python CNN.py --architecture short_cnn    arch_short_cnn
+python CNN.py --architecture long_cnn     arch_long_cnn
+python CNN.py --architecture small_model  arch_small_model
 
 # Activations in {'linear', 'sigmoid', 'softplus', 'elu'}
 python CNN.py --activation linear    act_linear
