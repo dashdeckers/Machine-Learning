@@ -62,7 +62,7 @@ colors = [
 
 # Plot the data
 n_epochs = 20
-comparison = 'dropouts'
+comparison = 'activations'
 metric = 'accuracy'
 
 # Remove any incomplete runs (runs must have exactly n_epochs datapoints)
@@ -82,9 +82,11 @@ for name, (valid, train) in groupby(data, lambda g: g[0]):
     else:
         label = '_'.join(name.split('_')[1:])
 
+    # Convert metric to metric_idx
+    metric_idx = {'accuracy': 0, 'categorical_accuracy': 1}[metric]
+
     # Filter out runs that we are not comparing
     if label in comparison_sets[comparison]:
-        metric_idx = {'accuracy': 0, 'categorical_accuracy': 1}[metric]
         cmap = colors.pop()
 
         # Plot the train and validation data of a run with similar colors
@@ -92,25 +94,26 @@ for name, (valid, train) in groupby(data, lambda g: g[0]):
             range(n_epochs),
             train_data[metric_idx],
             label=f'{label} train',
-            c=cmap(0.5)
+            color=cmap(0.5)
         )
         plt.plot(
             range(n_epochs),
             valid_data[metric_idx],
             label=f'{label} validation',
-            c=cmap(0.9)
+            color=cmap(0.9)
         )
 
     t, v = train_data[metric_idx], valid_data[metric_idx]
     print(f'Run Name: {label}, metric: {metric}')
-    print(f'Best Train: {max(t)}')
-    print(f'Best Validation: {max(v)}')
-    print(f'Average Train: {sum(t) / len(t)}')
-    print(f'Average Validation: {sum(v) / len(v)}\n')
+    print(f'Best Train: {round(max(t), 2)}')
+    print(f'Best Validation: {round(max(v), 2)}')
+    print(f'Average Train: {round(sum(t) / len(t), 2)}')
+    print(f'Average Validation: {round(sum(v) / len(v), 2)}\n')
 
 plt.title(f'Training and validation errors for different {comparison}')
 plt.ylabel(f"{' '.join(metric.split('_')).title()}")
 plt.xlabel(f'Epoch')
 plt.xticks(list(range(n_epochs)))
+plt.yticks([x/10 for x in range(10)])
 plt.legend()
 plt.show()
