@@ -109,5 +109,6 @@ plt.show()
 
 def make_image(val1, val2):
     inp = np.array([val1, val2]).reshape(-1, 2)
-    plt.imshow(decoder.predict(inp).reshape(digit_size, digit_size), cmap='gray')
+    plt.imshow(decoder.predict(inp).reshape(digit_size, digit_size),
+               cmap='gray')
     plt.show()
