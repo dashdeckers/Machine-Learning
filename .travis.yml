@@ -13,12 +13,15 @@ install:
 script:
   - mypy 'Machine Learning/Project Digits/.' 
   - mypy 'Neural Networks/.'
-  - mypy 'Deep Learning/.'
+  - mypy 'Deep Learning/CNN/.'
+  - mypy 'Deep Learning/VAE/.'
 
   - flake8 'Machine Learning/Project Digits/.' 
   - flake8 'Neural Networks/.'
-  - flake8 'Deep Learning/.'
+  - flake8 'Deep Learning/CNN/.'
+  - flake8 'Deep Learning/VAE/.'
 
   - pydocstyle 'Machine Learning/Project Digits/.' 
   - pydocstyle 'Neural Networks/.'
-  - pydocstyle 'Deep Learning/.'
+  - pydocstyle 'Deep Learning/CNN/.'
+  - pydocstyle 'Deep Learning/VAE/.'
