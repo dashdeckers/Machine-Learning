@@ -15,7 +15,7 @@ original_dim = im_shape[0] * im_shape[1] * channels  # 784
 intermediate_dim = 256
 latent_dim = 2
 batch_size = 1024
-epochs = 10
+epochs = 3
 epsilon_std = 1.0
 
 
@@ -169,9 +169,15 @@ z_grid = norm.ppf(u_grid)
 x_decoded = decoder.predict(z_grid.reshape(n*n, 2))
 x_decoded = x_decoded.reshape(n, n, digit_size, digit_size, channels)
 
-plt.figure(figsize=(n, n))
-# plt.imshow(np.block(list(map(list, x_decoded))))
-plt.imshow(list(map(list, x_decoded.reshape(15*im_shape[0], 15*im_shape[1], channels))))
+x = np.dstack((np.block(list(map(list, x_decoded[:, :, :, :, 0]))),
+              np.block(list(map(list, x_decoded[:, :, :, :, 1]))),
+              np.block(list(map(list, x_decoded[:, :, :, :, 2])))))
+assert x.shape == (240, 240, 3)
+plt.figure(figsize=(10, 10))
+# plt.imshow(np.block(list(map(list, x_decoded[:, :, :, :, 0]))), cmap='gray')
+plt.imshow(x)
+
+# plt.imshow(x_decoded.reshape(15*im_shape[0], 15*im_shape[1], channels))
 plt.show()
 
 
