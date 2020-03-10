@@ -1,16 +1,19 @@
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
-from keras import backend as K
-from keras.datasets import mnist
-from keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
-from keras.models import Model, Sequential
+import tensorflow as tf
+import tensorflow_datasets as tfds
 from scipy.stats import norm
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
+from tensorflow.keras.models import Model, Sequential
 
-original_dim = 784
+original_dim = 16*16 * 3 # 784
 intermediate_dim = 256
 latent_dim = 2
-batch_size = 100
-epochs = 50
+batch_size = 1024
+epochs = 2
 epsilon_std = 1.0
 
 
@@ -47,7 +50,9 @@ decoder = Sequential([
     Dense(original_dim, activation='sigmoid')
 ])
 
-x = Input(shape=(original_dim,))
+# Image input
+x = Input(shape=(original_dim, ))
+# Encoder
 h = Dense(intermediate_dim, activation='relu')(x)
 
 z_mu = Dense(latent_dim)(h)
@@ -56,41 +61,103 @@ z_log_var = Dense(latent_dim)(h)
 z_mu, z_log_var = KLDivergenceLayer()([z_mu, z_log_var])
 z_sigma = Lambda(lambda t: K.exp(.5*t))(z_log_var)
 
-eps = Input(tensor=K.random_normal(stddev=epsilon_std,
-                                   shape=(K.shape(x)[0], latent_dim)))
+eps = K.random_normal(stddev=epsilon_std,
+                      shape=(K.shape(x)[0], latent_dim),
+                      seed=42)
 z_eps = Multiply()([z_sigma, eps])
 z = Add()([z_mu, z_eps])
 
 x_pred = decoder(z)
 
-vae = Model(inputs=[x, eps], outputs=x_pred)
+vae = Model(x, x_pred)
+
 vae.compile(optimizer='rmsprop', loss=nll)
 
-# train the VAE on MNIST digits
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
-x_train = x_train.reshape(-1, original_dim) / 255.
-x_test = x_test.reshape(-1, original_dim) / 255.
 
-vae.fit(x_train,
-        x_train,
-        shuffle=True,
+
+
+dataset, info = tfds.load(
+    "stanford_dogs",
+    split="train",
+    with_info=True,
+)
+
+val_dataset = tfds.load(
+    "stanford_dogs",
+    split="test",
+)
+
+steps_per_epoch = math.ceil(info.splits["train"].num_examples / batch_size)
+val_steps = math.ceil(info.splits["test"].num_examples / batch_size)
+
+
+def preprocessing(data):
+    image = tf.cast(data["image"], tf.float32)
+    image = image / 255.0
+    # Resize the image
+    image = tf.image.resize(image, (16, 16))
+    image = tf.reshape(image, [-1])
+    return image, image
+
+
+dataset = (
+    dataset.cache()
+    .shuffle(10 * batch_size)
+    .repeat()
+    .map(preprocessing)
+    .batch(batch_size)
+    .prefetch(5)
+)
+
+val_dataset = (
+    val_dataset.cache()
+    .repeat()
+    .map(preprocessing, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    .batch(batch_size)
+    .prefetch(5)
+)
+
+vae.fit(dataset,
         epochs=epochs,
-        batch_size=batch_size,
-        validation_data=(x_test, x_test))
+        steps_per_epoch=steps_per_epoch,
+        validation_data=val_dataset,
+        validation_steps=val_steps) 
+
+
+def preprocessing_y(data):
+    image = tf.cast(data["image"], tf.float32)
+    image = image / 255.0
+    # Resize the image
+    image = tf.image.resize(image, (16, 16))
+    image = tf.reshape(image, [-1])
+    print(image.shape)
+    return image, data["label"]
+
+
+val_yset = (
+    tfds.load(
+        "stanford_dogs",
+        split="test",
+    ).cache()
+    .repeat()
+    .map(preprocessing_y, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    .batch(batch_size)
+    .prefetch(5)
+)
 
 encoder = Model(x, z_mu)
 
 # display a 2D plot of the digit classes in the latent space
-z_test = encoder.predict(x_test, batch_size=batch_size)
+z_test = encoder.predict(val_dataset, steps=1)
 plt.figure(figsize=(6, 6))
-plt.scatter(z_test[:, 0], z_test[:, 1], c=y_test,
-            alpha=.4, s=3**2, cmap='viridis')
+plt.scatter(z_test[:, 0], z_test[:, 1])#, c=1,
+            #alpha=.4, s=3**2, cmap='viridis')
 plt.colorbar()
 plt.show()
 
 # display a 2D manifold of the digits
 n = 15  # figure with 15x15 digits
-digit_size = 28
+digit_size = 16
 
 # linearly spaced coordinates on the unit square were transformed
 # through the inverse CDF (ppf) of the Gaussian to produce values
@@ -103,7 +170,7 @@ x_decoded = decoder.predict(z_grid.reshape(n*n, 2))
 x_decoded = x_decoded.reshape(n, n, digit_size, digit_size)
 
 plt.figure(figsize=(10, 10))
-plt.imshow(np.block(list(map(list, x_decoded))), cmap='gray')
+plt.imshow(np.block(list(map(list, x_decoded))))
 plt.show()
 
 
