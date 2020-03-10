@@ -9,11 +9,13 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
 from tensorflow.keras.models import Model, Sequential
 
-original_dim = 16*16 * 3 # 784
+im_shape = (16, 16)
+channels = 3
+original_dim = im_shape[0] * im_shape[1] * channels  # 784
 intermediate_dim = 256
 latent_dim = 2
 batch_size = 1024
-epochs = 2
+epochs = 10
 epsilon_std = 1.0
 
 
@@ -74,8 +76,6 @@ vae = Model(x, x_pred)
 vae.compile(optimizer='rmsprop', loss=nll)
 
 
-
-
 dataset, info = tfds.load(
     "stanford_dogs",
     split="train",
@@ -95,7 +95,7 @@ def preprocessing(data):
     image = tf.cast(data["image"], tf.float32)
     image = image / 255.0
     # Resize the image
-    image = tf.image.resize(image, (16, 16))
+    image = tf.image.resize(image, im_shape)
     image = tf.reshape(image, [-1])
     return image, image
 
@@ -121,14 +121,14 @@ vae.fit(dataset,
         epochs=epochs,
         steps_per_epoch=steps_per_epoch,
         validation_data=val_dataset,
-        validation_steps=val_steps) 
+        validation_steps=val_steps)
 
 
 def preprocessing_y(data):
     image = tf.cast(data["image"], tf.float32)
     image = image / 255.0
     # Resize the image
-    image = tf.image.resize(image, (16, 16))
+    image = tf.image.resize(image, im_shape)
     image = tf.reshape(image, [-1])
     print(image.shape)
     return image, data["label"]
@@ -141,7 +141,7 @@ val_yset = (
     ).cache()
     .repeat()
     .map(preprocessing_y, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    .batch(batch_size)
+    .batch(225)
     .prefetch(5)
 )
 
@@ -150,14 +150,14 @@ encoder = Model(x, z_mu)
 # display a 2D plot of the digit classes in the latent space
 z_test = encoder.predict(val_dataset, steps=1)
 plt.figure(figsize=(6, 6))
-plt.scatter(z_test[:, 0], z_test[:, 1])#, c=1,
-            #alpha=.4, s=3**2, cmap='viridis')
+plt.scatter(z_test[:, 0], z_test[:, 1])  # , c=1,
+# alpha=.4, s=3**2, cmap='viridis')
 plt.colorbar()
 plt.show()
 
 # display a 2D manifold of the digits
 n = 15  # figure with 15x15 digits
-digit_size = 16
+digit_size = im_shape[0]
 
 # linearly spaced coordinates on the unit square were transformed
 # through the inverse CDF (ppf) of the Gaussian to produce values
@@ -167,11 +167,23 @@ u_grid = np.dstack(np.meshgrid(np.linspace(0.05, 0.95, n),
                                np.linspace(0.05, 0.95, n)))
 z_grid = norm.ppf(u_grid)
 x_decoded = decoder.predict(z_grid.reshape(n*n, 2))
-x_decoded = x_decoded.reshape(n, n, digit_size, digit_size)
+x_decoded = x_decoded.reshape(n, n, digit_size, digit_size, channels)
 
-plt.figure(figsize=(10, 10))
-plt.imshow(np.block(list(map(list, x_decoded))))
+plt.figure(figsize=(n, n))
+# plt.imshow(np.block(list(map(list, x_decoded))))
+plt.imshow(list(map(list, x_decoded.reshape(15*im_shape[0], 15*im_shape[1], channels))))
 plt.show()
+
+
+# fig = plt.figure(figsize=(n, n))
+# i = 1
+# for c in range(n):  # columns
+#     for r in range(n):  # rows
+#         img = x_decoded[c][r]
+#         plt.subplot(n, n, i, sharex=True, sharey=True)
+#         plt.imshow(img)
+#         i += 1
+# plt.show()
 
 
 def make_image(val1, val2):
