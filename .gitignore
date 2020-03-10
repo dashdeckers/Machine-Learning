@@ -1,4 +1,5 @@
-Test_Images/
+# PyType
+.pytype/
 
 # Sublime stuff
 *.sublime-workspace

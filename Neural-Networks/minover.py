@@ -37,7 +37,7 @@ def run_minover(P=5, N=2, t_max=100, clamped=False, use_teacher=False):
                 min_stability = (xi_v, S_v, stability)
 
         # Update the weight vector with v = (xi_v, S_v)
-        min_xi_v, min_S_v, stability = min_stability
+        min_xi_v, min_S_v, stability = min_stability  # type: ignore
         w += (min_xi_v * min_S_v) / N
 
         # Send the new weights to the plotter

@@ -8,20 +8,7 @@ cache:
   - pip
 
 install:
-  - pip install mypy flake8 pydocstyle
+  - pip install pytype flake8 pydocstyle
 
 script:
-  # - mypy 'Machine Learning/Project Digits/.' 
-  # - mypy 'Neural Networks/.'
-  # - mypy 'Deep Learning/CNN/.'
-  # - mypy 'Deep Learning/VAE/.'
-
-  - flake8 'Machine Learning/Project Digits/.' 
-  - flake8 'Neural Networks/.'
-  - flake8 'Deep Learning/CNN/.'
-  - flake8 'Deep Learning/VAE/.'
-
-  - pydocstyle 'Machine Learning/Project Digits/.' 
-  - pydocstyle 'Neural Networks/.'
-  - pydocstyle 'Deep Learning/CNN/.'
-  - pydocstyle 'Deep Learning/VAE/.'
+  - ./check_build.sh
