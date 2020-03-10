@@ -11,10 +11,10 @@ install:
   - pip install mypy flake8 pydocstyle
 
 script:
-  - mypy 'Machine Learning/Project Digits/.' 
-  - mypy 'Neural Networks/.'
-  - mypy 'Deep Learning/CNN/.'
-  - mypy 'Deep Learning/VAE/.'
+  # - mypy 'Machine Learning/Project Digits/.' 
+  # - mypy 'Neural Networks/.'
+  # - mypy 'Deep Learning/CNN/.'
+  # - mypy 'Deep Learning/VAE/.'
 
   - flake8 'Machine Learning/Project Digits/.' 
   - flake8 'Neural Networks/.'
