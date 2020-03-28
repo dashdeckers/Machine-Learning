@@ -8,7 +8,7 @@ from scipy.stats import norm
 from VAE import mnist, stanford_dogs  # noqa
 
 # Load experiment variables
-experiment = mnist
+experiment = stanford_dogs
 
 model_path = experiment['model_path']
 im_shape = experiment['im_shape']
@@ -16,7 +16,7 @@ channels = experiment['channels']
 latent_dim = experiment['latent_dim']
 dataset = experiment['dataset']
 
-assert latent_dim == 2, 'Currently only supports 2 latent variables'
+# assert latent_dim == 2, 'Currently only supports 2 latent variables'
 
 # Load the saved model
 encoder = tf.keras.models.load_model(os.path.join(model_path, 'encoder'))

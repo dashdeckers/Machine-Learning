@@ -7,12 +7,12 @@ from model import make_model
 # Define experiments
 stanford_dogs = {
     'dataset': 'stanford_dogs',
-    'im_shape': (16, 16),  # (32, 32)
+    'im_shape': (32, 32),  # (32, 32)
     'channels': 3,
     'interm_dim': 256,
-    'latent_dim': 2,
+    'latent_dim': 15,
     'batch_size': 512,
-    'epochs': 2,
+    'epochs': 100,
     'epsilon_std': 1.0,
     'model_path': 'models_dogs',
 }
@@ -80,4 +80,4 @@ def main(
 
 
 if __name__ == '__main__':
-    main(**mnist)
+    main(**stanford_dogs)
