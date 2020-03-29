@@ -84,7 +84,8 @@ def plot_2D_manifold_of_latent_variables(
     assert im_shape[0] == im_shape[1], 'Only square images are supported'
     assert len(latent_indices) == 2, 'We can only plot a 2D manifold'
     assert latent_indices[0] != latent_indices[1], 'Plot both z1 and z2 please'
-    assert (latent_dim == 2 and latent_indices == (0, 1)) or latent_dim > 2
+    assert (latent_dim == 2 and latent_indices == (0, 1)) or latent_dim > 2, \
+        'If there are only 2 latent dimensions, the indices must be (0, 1)'
 
     # Number of images, size of each image
     n = 15
@@ -106,7 +107,7 @@ def plot_2D_manifold_of_latent_variables(
         elif idx == latent_indices[1]:
             stack_list.append(z_grid_2)
         else:
-            stack_list.append(np.zeros(shape=(n, n)))
+            stack_list.append(np.ones(shape=(n, n)))
 
     z_grid = np.dstack(stack_list)
     assert z_grid.shape == (n, n, latent_dim)
@@ -149,7 +150,7 @@ def plot_2D_manifold_of_latent_variables(
 
 
 def plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape):
-    """Plot all possible combinations of (z1, z2)."""
+    """Plot all possible combinations of latent variables to vary."""
     for latent_indices in combinations(range(latent_dim), 2):
         plot_2D_manifold_of_latent_variables(
             decoder,
@@ -161,12 +162,5 @@ def plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape):
 
 
 if __name__ == '__main__':
-    latent_indices = (0, 1)
-
-    plot_2D_manifold_of_latent_variables(
-        decoder,
-        latent_dim,
-        latent_indices,
-        channels,
-        im_shape
-    )
+    # Use CTRL+C to quit early
+    plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape)
