@@ -12,7 +12,7 @@ stanford_dogs = {
     'interm_dim': 256,
     'latent_dim': 15,
     'batch_size': 512,
-    'epochs': 1,
+    'epochs': 10,
     'epsilon_std': 1.0,
     'model_path': 'models_dogs',
 }
@@ -83,5 +83,5 @@ def main(
     decoder.save(os.path.join(model_path, 'decoder'))
 
 if __name__ == '__main__':
-    # main(**stanford_dogs)
-    main(**mnist)
+    main(**stanford_dogs)
+    # main(**mnist)
