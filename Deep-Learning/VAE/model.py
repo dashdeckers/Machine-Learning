@@ -1,6 +1,9 @@
+import gc # Garbage collection
+
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
 from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.callbacks import Callback
 
 
 def nll(y_true, y_pred):
@@ -71,3 +74,17 @@ def make_model(
     encoder = Model(x, z_mu)
 
     return vae, encoder, decoder
+
+class GarbageCollectionCallback(Callback):
+
+    # def on_epoch_end(self, epoch, logs=None):
+    #     gc.collect()
+
+    # def on_train_batch_end(self, batch, logs=None):
+    #     gc.collect()
+
+    # def on_test_batch_end(self, batch, logs=None):
+    #     gc.collect()
+
+    # Catch if no callbacks are enabled
+    lambda *_, **__: None 

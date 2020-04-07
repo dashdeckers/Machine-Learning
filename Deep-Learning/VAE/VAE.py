@@ -2,7 +2,7 @@ import math
 import os
 
 from data import get_data
-from model import make_model
+from model import make_model, GarbageCollectionCallback
 
 # Define experiments
 stanford_dogs = {
@@ -12,7 +12,7 @@ stanford_dogs = {
     'interm_dim': 256,
     'latent_dim': 15,
     'batch_size': 512,
-    'epochs': 100,
+    'epochs': 1,
     'epsilon_std': 1.0,
     'model_path': 'models_dogs',
 }
@@ -24,7 +24,7 @@ mnist = {
     'interm_dim': 256,
     'latent_dim': 2,
     'batch_size': 512,
-    'epochs': 5,
+    'epochs': 10,
     'epsilon_std': 1.0,
     'model_path': 'models_mnist',
 }
@@ -64,13 +64,15 @@ def main(
         epsilon_std=epsilon_std,
     )
 
+
     # Train the model
     vae.fit(
         train,
         epochs=epochs,
         steps_per_epoch=steps_per_epoch,
         validation_data=test,
-        validation_steps=val_steps
+        validation_steps=val_steps,
+        callbacks=[GarbageCollectionCallback()],
     )
 
     # Save the model
@@ -78,6 +80,6 @@ def main(
     encoder.save(os.path.join(model_path, 'encoder'))
     decoder.save(os.path.join(model_path, 'decoder'))
 
-
 if __name__ == '__main__':
     main(**stanford_dogs)
+    # main(**mnist)
