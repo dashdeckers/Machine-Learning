@@ -2,7 +2,7 @@ import math
 import os
 
 from data import get_data
-from model import GarbageCollectionCallback, gpu_configuration, make_model
+from model import CustomCallback, gpu_configuration, make_model
 
 # Define experiments
 stanford_dogs = {
@@ -15,6 +15,7 @@ stanford_dogs = {
     'epochs': 10,
     'epsilon_std': 1.0,
     'model_path': 'models_dogs',
+    'checkpoint': 100,
 }
 
 mnist = {
@@ -24,9 +25,10 @@ mnist = {
     'interm_dim': 256,
     'latent_dim': 2,
     'batch_size': 512,
-    'epochs': 10,
+    'epochs': 12,
     'epsilon_std': 1.0,
     'model_path': 'models_mnist',
+    'checkpoint': 10,
 }
 
 
@@ -39,7 +41,8 @@ def main(
             batch_size,
             epochs,
             epsilon_std,
-            model_path
+            model_path,
+            checkpoint
         ):
     """Run the experiment."""
     original_dim = im_shape[0] * im_shape[1] * channels
@@ -74,7 +77,7 @@ def main(
         steps_per_epoch=steps_per_epoch,
         validation_data=test,
         validation_steps=val_steps,
-        callbacks=[GarbageCollectionCallback()],
+        callbacks=[CustomCallback(path=model_path, checkpoint=checkpoint)],
     )
 
     # Save the model

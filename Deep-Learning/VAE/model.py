@@ -1,3 +1,4 @@
+import os
 import gc # Garbage collection
 import tensorflow as tf
 
@@ -35,10 +36,20 @@ class KLDivergenceLayer(Layer):
         return inputs
 
 
-class GarbageCollectionCallback(Callback):
+class CustomCallback(Callback):
+    """ Descends from Callback """
 
-    # def on_epoch_end(self, epoch, logs=None):
-    #     gc.collect()
+    def __init__(self, path, checkpoint):
+        self.model_path = path
+        self.checkpoint = checkpoint
+
+    def on_epoch_end(self, epoch, logs=None):
+        # Checkpoint - Save every 100 epochs
+        if epoch % self.checkpoint == 0:
+            print("\nSaving the model at epoch: ", epoch+1)
+            self.model.save(os.path.join(self.model_path, 'vae'))
+        # Memory optimization - slows down the process
+        # gc.collect()
 
     # def on_train_batch_end(self, batch, logs=None):
     #     gc.collect()
@@ -52,6 +63,7 @@ class GarbageCollectionCallback(Callback):
 def gpu_configuration():
     physical_devices = tf.config.list_physical_devices('GPU')
     try: 
+        # Dynamically allocate GPU memory use
         tf.config.experimental.set_memory_growth(physical_devices[0], True) 
     except: 
         # Invalid device or cannot modify virtual devices once initialized. 
