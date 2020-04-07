@@ -83,5 +83,5 @@ def main(
     decoder.save(os.path.join(model_path, 'decoder'))
 
 if __name__ == '__main__':
-    main(**stanford_dogs)
-    # main(**mnist)
+    # main(**stanford_dogs)
+    main(**mnist)
