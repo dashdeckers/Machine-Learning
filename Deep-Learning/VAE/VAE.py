@@ -2,7 +2,7 @@ import math
 import os
 
 from data import get_data
-from model import make_model, GarbageCollectionCallback
+from model import GarbageCollectionCallback, gpu_configuration, make_model
 
 # Define experiments
 stanford_dogs = {
@@ -55,6 +55,9 @@ def main(
     steps_per_epoch = math.ceil(info.splits["train"].num_examples / batch_size)
     val_steps = math.ceil(info.splits["test"].num_examples / batch_size)
 
+    # Setup GPU options
+    gpu_configuration()
+
     # Make the model
     vae, encoder, decoder = make_model(
         original_dim=original_dim,
@@ -63,7 +66,6 @@ def main(
         epochs=epochs,
         epsilon_std=epsilon_std,
     )
-
 
     # Train the model
     vae.fit(
@@ -81,5 +83,5 @@ def main(
     decoder.save(os.path.join(model_path, 'decoder'))
 
 if __name__ == '__main__':
-    main(**stanford_dogs)
-    # main(**mnist)
+    # main(**stanford_dogs)
+    main(**mnist)

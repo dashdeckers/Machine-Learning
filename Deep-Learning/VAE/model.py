@@ -1,4 +1,5 @@
 import gc # Garbage collection
+import tensorflow as tf
 
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
@@ -33,6 +34,28 @@ class KLDivergenceLayer(Layer):
 
         return inputs
 
+
+class GarbageCollectionCallback(Callback):
+
+    # def on_epoch_end(self, epoch, logs=None):
+    #     gc.collect()
+
+    # def on_train_batch_end(self, batch, logs=None):
+    #     gc.collect()
+
+    # def on_test_batch_end(self, batch, logs=None):
+    #     gc.collect()
+
+    # Catch if no callbacks are enabled
+    lambda *_, **__: None 
+
+def gpu_configuration():
+    physical_devices = tf.config.list_physical_devices('GPU')
+    try: 
+        tf.config.experimental.set_memory_growth(physical_devices[0], True) 
+    except: 
+        # Invalid device or cannot modify virtual devices once initialized. 
+        pass 
 
 def make_model(
             original_dim,
@@ -74,17 +97,3 @@ def make_model(
     encoder = Model(x, z_mu)
 
     return vae, encoder, decoder
-
-class GarbageCollectionCallback(Callback):
-
-    # def on_epoch_end(self, epoch, logs=None):
-    #     gc.collect()
-
-    # def on_train_batch_end(self, batch, logs=None):
-    #     gc.collect()
-
-    # def on_test_batch_end(self, batch, logs=None):
-    #     gc.collect()
-
-    # Catch if no callbacks are enabled
-    lambda *_, **__: None 
