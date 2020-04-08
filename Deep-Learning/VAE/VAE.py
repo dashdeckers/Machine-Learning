@@ -28,7 +28,7 @@ mnist = {
     'epochs': 12,
     'epsilon_std': 1.0,
     'model_path': 'models_mnist',
-    'checkpoint': 10,
+    'checkpoint': 2,
 }
 
 
@@ -77,7 +77,12 @@ def main(
         steps_per_epoch=steps_per_epoch,
         validation_data=test,
         validation_steps=val_steps,
-        callbacks=[CustomCallback(path=model_path, checkpoint=checkpoint)],
+        callbacks=[CustomCallback(
+            path=model_path, 
+            checkpoint=checkpoint, 
+            encoder=encoder, 
+            decoder=decoder
+            )],
     )
 
     # Save the model

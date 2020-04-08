@@ -39,15 +39,19 @@ class KLDivergenceLayer(Layer):
 class CustomCallback(Callback):
     """ Descends from Callback """
 
-    def __init__(self, path, checkpoint):
+    def __init__(self, path, checkpoint, encoder, decoder):
         self.model_path = path
         self.checkpoint = checkpoint
+        self.encoder = encoder
+        self.decoder = decoder
 
     def on_epoch_end(self, epoch, logs=None):
         # Checkpoint - Save every 100 epochs
         if epoch % self.checkpoint == 0:
             print("\nSaving the model at epoch: ", epoch+1)
             self.model.save(os.path.join(self.model_path, 'vae'))
+            self.encoder.save(os.path.join(self.model_path, 'encoder'))
+            self.decoder.save(os.path.join(self.model_path, 'decoder'))
         # Memory optimization - slows down the process
         # gc.collect()
 

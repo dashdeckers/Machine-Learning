@@ -9,8 +9,8 @@ from scipy.stats import norm
 from VAE import mnist, stanford_dogs  # noqa
 
 # Load experiment variables
-# experiment = mnist
-experiment = stanford_dogs
+experiment = mnist
+# experiment = stanford_dogs
 
 model_path = experiment['model_path']
 im_shape = experiment['im_shape']
