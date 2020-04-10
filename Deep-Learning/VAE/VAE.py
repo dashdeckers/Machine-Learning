@@ -1,8 +1,10 @@
 import math
 import os
+import tensorflow as tf
+import numpy as np
 
 from data import get_data
-from model import CustomCallback, gpu_configuration, make_model
+from model import CustomCallback, gpu_configuration, make_model, load_model
 
 # Define experiments
 stanford_dogs = {
@@ -16,6 +18,7 @@ stanford_dogs = {
     'epsilon_std': 1.0,
     'model_path': 'models_dogs',
     'checkpoint': 100,
+    'resume' : False,
 }
 
 mnist = {
@@ -28,7 +31,8 @@ mnist = {
     'epochs': 12,
     'epsilon_std': 1.0,
     'model_path': 'models_mnist',
-    'checkpoint': 2,
+    'checkpoint': 4,
+    'resume' : True,
 }
 
 
@@ -42,7 +46,8 @@ def main(
             epochs,
             epsilon_std,
             model_path,
-            checkpoint
+            checkpoint,
+            resume
         ):
     """Run the experiment."""
     original_dim = im_shape[0] * im_shape[1] * channels
@@ -61,14 +66,27 @@ def main(
     # Setup GPU options
     gpu_configuration()
 
-    # Make the model
-    vae, encoder, decoder = make_model(
-        original_dim=original_dim,
-        interm_dim=interm_dim,
-        latent_dim=latent_dim,
-        epochs=epochs,
-        epsilon_std=epsilon_std,
-    )
+    if resume:
+        vae, encoder, decoder, resume = load_model(
+                                            original_dim=original_dim,
+                                            interm_dim=interm_dim,
+                                            latent_dim=latent_dim,
+                                            epochs=epochs,
+                                            epsilon_std=epsilon_std,
+                                            model_path=model_path,
+                                            resume=resume,
+                                            train=train,
+                                        )
+    if not resume:
+        # Make the model
+        print("********************************")
+        vae, encoder, decoder = make_model(
+            original_dim=original_dim,
+            interm_dim=interm_dim,
+            latent_dim=latent_dim,
+            epochs=epochs,
+            epsilon_std=epsilon_std,
+        )
 
     # Train the model
     vae.fit(
@@ -85,8 +103,11 @@ def main(
             )],
     )
 
+    # Reset metrics before saving so that loaded model has same state,
+    # since metric states are not preserved by Model.save_weights
+    vae.reset_metrics()
     # Save the model
-    vae.save(os.path.join(model_path, 'vae'))
+    vae.save_weights(os.path.join(model_path, 'vae',""), save_format='tf')
     encoder.save(os.path.join(model_path, 'encoder'))
     decoder.save(os.path.join(model_path, 'decoder'))
 

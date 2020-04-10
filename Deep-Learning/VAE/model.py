@@ -1,6 +1,7 @@
 import os
 import gc # Garbage collection
 import tensorflow as tf
+import random
 
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
@@ -46,10 +47,12 @@ class CustomCallback(Callback):
         self.decoder = decoder
 
     def on_epoch_end(self, epoch, logs=None):
-        # Checkpoint - Save every 100 epochs
+        # Checkpoint - Save every X epochs
+        if self.checkpoint == 0:
+            return
         if epoch % self.checkpoint == 0:
             print("\nSaving the model at epoch: ", epoch+1)
-            self.model.save(os.path.join(self.model_path, 'vae'))
+            self.model.save_weights(os.path.join(self.model_path, 'vae', ""), save_format='tf')
             self.encoder.save(os.path.join(self.model_path, 'encoder'))
             self.decoder.save(os.path.join(self.model_path, 'decoder'))
         # Memory optimization - slows down the process
@@ -72,6 +75,41 @@ def gpu_configuration():
     except: 
         # Invalid device or cannot modify virtual devices once initialized. 
         pass 
+
+def load_model(
+        original_dim,
+        interm_dim,
+        latent_dim,
+        epochs,
+        epsilon_std,
+        model_path,
+        resume,
+        train
+    ):
+    try:
+        # Load the en/decoder, create the VAE and load its weights
+        encoder = tf.keras.models.load_model(os.path.join(model_path, 'encoder'))
+        decoder = tf.keras.models.load_model(os.path.join(model_path, 'decoder'))
+        vae, _, _ = make_model(
+            original_dim=original_dim,
+            interm_dim=interm_dim,
+            latent_dim=latent_dim,
+            epochs=epochs,
+            epsilon_std=epsilon_std,
+        )
+        vae.compile(optimizer='rmsprop', loss=nll)
+        # Train on a single batch to initialize the variables used by the optimizers, as well as any stateful metric variables
+        vae.train_on_batch(train)
+        # Load the state of the old model
+        vae.load_weights(os.path.join(model_path, 'vae',""))
+        print("\nResuming from loaded model\n")
+    except (ImportError, IOError, ValueError) as e:
+        print(e)
+        print("\nContinuing with creating new model\n")
+        resume = False
+        return None, None, None, resume
+
+    return vae, encoder, decoder, resume
 
 def make_model(
             original_dim,
