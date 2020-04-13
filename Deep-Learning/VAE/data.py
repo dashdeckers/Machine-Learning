@@ -3,7 +3,6 @@ from functools import partial
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-
 def preprocessing(data, im_shape, labels=False):
     image = tf.cast(data["image"], tf.float32)
     # Normalize
@@ -52,3 +51,4 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
     )
 
     return train, test, info
+    

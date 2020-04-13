@@ -2,9 +2,10 @@ import math
 import os
 import tensorflow as tf
 import numpy as np
+import json
 
 from data import get_data
-from model import CustomCallback, gpu_configuration, make_model, load_model
+from model import CustomCallback, gpu_configuration, make_model, load_model, save_model
 
 # Define experiments
 stanford_dogs = {
@@ -28,11 +29,11 @@ mnist = {
     'interm_dim': 256,
     'latent_dim': 2,
     'batch_size': 512,
-    'epochs': 12,
+    'epochs': 1,
     'epsilon_std': 1.0,
     'model_path': 'models_mnist',
-    'checkpoint': 4,
-    'resume' : True,
+    'checkpoint': 0,
+    'resume' : False,
 }
 
 
@@ -96,20 +97,25 @@ def main(
         validation_data=test,
         validation_steps=val_steps,
         callbacks=[CustomCallback(
-            path=model_path, 
-            checkpoint=checkpoint, 
-            encoder=encoder, 
-            decoder=decoder
+                path=model_path, 
+                checkpoint=checkpoint, 
+                encoder=encoder, 
+                decoder=decoder,
             )],
     )
 
-    # Reset metrics before saving so that loaded model has same state,
-    # since metric states are not preserved by Model.save_weights
-    vae.reset_metrics()
     # Save the model
-    vae.save_weights(os.path.join(model_path, 'vae',""), save_format='tf')
-    encoder.save(os.path.join(model_path, 'encoder'))
-    decoder.save(os.path.join(model_path, 'decoder'))
+    save_model(
+        vae=vae,
+        encoder=encoder,
+        decoder=decoder,
+        model_path=model_path,
+    )
+    # Save the experiment details
+    dict = mnist if dataset=="mnist" else stanford_dogs
+
+    with open(os.path.join(model_path,'experiment.json'), 'w') as outfile:
+        json.dump(dict, outfile)
 
 if __name__ == '__main__':
     # main(**stanford_dogs)

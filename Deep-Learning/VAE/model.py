@@ -1,7 +1,6 @@
 import os
 import gc # Garbage collection
 import tensorflow as tf
-import random
 
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
@@ -52,9 +51,12 @@ class CustomCallback(Callback):
             return
         if epoch % self.checkpoint == 0:
             print("\nSaving the model at epoch: ", epoch+1)
-            self.model.save_weights(os.path.join(self.model_path, 'vae', ""), save_format='tf')
-            self.encoder.save(os.path.join(self.model_path, 'encoder'))
-            self.decoder.save(os.path.join(self.model_path, 'decoder'))
+            save_model(
+                    vae=self.model,
+                    encoder=self.encoder,
+                    decoder=self.decoder,
+                    model_path=self.model_path,
+                )
         # Memory optimization - slows down the process
         # gc.collect()
 
@@ -110,6 +112,21 @@ def load_model(
         return None, None, None, resume
 
     return vae, encoder, decoder, resume
+
+
+def save_model(
+            vae,
+            encoder,
+            decoder,
+            model_path
+        ):
+    # Reset metrics before saving so that loaded model has same state,
+    # since metric states are not preserved by Model.save_weights
+    vae.reset_metrics()
+    # Save the model
+    vae.save_weights(os.path.join(model_path, 'vae',""), save_format='tf')
+    encoder.save(os.path.join(model_path, 'encoder'))
+    decoder.save(os.path.join(model_path, 'decoder'))
 
 def make_model(
             original_dim,
