@@ -101,7 +101,7 @@ def load_model(
         )
         vae.compile(optimizer='rmsprop', loss=nll)
         # Train on a single batch to initialize the variables used by the optimizers, as well as any stateful metric variables
-        vae.train_on_batch(train)
+        # vae.train_on_batch(train)
         # Load the state of the old model
         vae.load_weights(os.path.join(model_path, 'vae',""))
         print("\nResuming from loaded model\n")

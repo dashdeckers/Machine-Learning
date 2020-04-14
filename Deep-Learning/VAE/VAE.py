@@ -15,11 +15,11 @@ stanford_dogs = {
     'interm_dim': 256,
     'latent_dim': 15,
     'batch_size': 512,
-    'epochs': 10,
+    'epochs': 3600,
     'epsilon_std': 1.0,
     'model_path': 'models_dogs',
     'checkpoint': 100,
-    'resume' : False,
+    'resume' : True,
 }
 
 mnist = {
@@ -29,11 +29,11 @@ mnist = {
     'interm_dim': 256,
     'latent_dim': 2,
     'batch_size': 512,
-    'epochs': 1,
+    'epochs': 20,
     'epsilon_std': 1.0,
     'model_path': 'models_mnist',
     'checkpoint': 0,
-    'resume' : False,
+    'resume' : True,
 }
 
 
@@ -118,5 +118,5 @@ def main(
         json.dump(dict, outfile)
 
 if __name__ == '__main__':
-    # main(**stanford_dogs)
-    main(**mnist)
+    main(**stanford_dogs)
+    # main(**mnist)
