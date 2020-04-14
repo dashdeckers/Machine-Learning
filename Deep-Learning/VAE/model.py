@@ -1,5 +1,4 @@
 import os
-import gc # Garbage collection
 import tensorflow as tf
 
 from tensorflow.keras import backend as K
@@ -57,15 +56,6 @@ class CustomCallback(Callback):
                     decoder=self.decoder,
                     model_path=self.model_path,
                 )
-        # Memory optimization - slows down the process
-        # gc.collect()
-
-    # def on_train_batch_end(self, batch, logs=None):
-    #     gc.collect()
-
-    # def on_test_batch_end(self, batch, logs=None):
-    #     gc.collect()
-
     # Catch if no callbacks are enabled
     lambda *_, **__: None 
 
