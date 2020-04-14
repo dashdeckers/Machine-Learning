@@ -1,9 +1,12 @@
+"""Serves to load the tensorflow dataset and prepare it."""
 from functools import partial
 
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
+
 def preprocessing(data, im_shape, labels=False):
+    """Cast images to tensorflow format."""
     image = tf.cast(data["image"], tf.float32)
     # Normalize
     image = image / 255.0
@@ -19,7 +22,6 @@ def preprocessing(data, im_shape, labels=False):
 
 def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
     """Load the Stanford Dogs dataset from TensorFlow and return it."""
-
     preprocess = partial(preprocessing, im_shape=im_shape, labels=labels)
 
     train_data, info = tfds.load(
@@ -51,4 +53,3 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
     )
 
     return train, test, info
-    

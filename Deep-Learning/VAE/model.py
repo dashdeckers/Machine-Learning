@@ -1,3 +1,4 @@
+"""Define the VAE model, saving, loading, layers and custom callbacks."""
 import os
 import tensorflow as tf
 
@@ -9,7 +10,6 @@ from tensorflow.keras.callbacks import Callback
 
 def nll(y_true, y_pred):
     """Negative log likelihood (Bernoulli)."""
-
     # keras.losses.binary_crossentropy gives the mean
     # over the last axis. we require the sum
     return K.sum(K.binary_crossentropy(y_true, y_pred), axis=-1)
@@ -36,7 +36,7 @@ class KLDivergenceLayer(Layer):
 
 
 class CustomCallback(Callback):
-    """ Descends from Callback """
+    """Descends from Callback."""
 
     def __init__(self, path, checkpoint, encoder, decoder):
         self.model_path = path
@@ -57,16 +57,18 @@ class CustomCallback(Callback):
                     model_path=self.model_path,
                 )
     # Catch if no callbacks are enabled
-    lambda *_, **__: None 
+    lambda *_, **__: None
+
 
 def gpu_configuration():
     physical_devices = tf.config.list_physical_devices('GPU')
-    try: 
+    try:
         # Dynamically allocate GPU memory use
-        tf.config.experimental.set_memory_growth(physical_devices[0], True) 
-    except: 
-        # Invalid device or cannot modify virtual devices once initialized. 
-        pass 
+        tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    except (ValueError, RuntimeError):
+        # Invalid device or cannot modify virtual devices once initialized.
+        pass
+
 
 def load_model(
         original_dim,
@@ -76,12 +78,13 @@ def load_model(
         epsilon_std,
         model_path,
         resume,
-        train
-    ):
+        train):
     try:
         # Load the en/decoder, create the VAE and load its weights
-        encoder = tf.keras.models.load_model(os.path.join(model_path, 'encoder'))
-        decoder = tf.keras.models.load_model(os.path.join(model_path, 'decoder'))
+        encoder = tf.keras.models.load_model(os.path.join(
+                                                model_path, 'encoder'))
+        decoder = tf.keras.models.load_model(os.path.join(
+                                                model_path, 'decoder'))
         vae, _, _ = make_model(
             original_dim=original_dim,
             interm_dim=interm_dim,
@@ -90,10 +93,11 @@ def load_model(
             epsilon_std=epsilon_std,
         )
         vae.compile(optimizer='rmsprop', loss=nll)
-        # Train on a single batch to initialize the variables used by the optimizers, as well as any stateful metric variables
+        # Train on a single batch to initialize the variables used by
+        # the optimizers, as well as any stateful metric variables.
         # vae.train_on_batch(train)
         # Load the state of the old model
-        vae.load_weights(os.path.join(model_path, 'vae',""))
+        vae.load_weights(os.path.join(model_path, 'vae', ""))
         print("\nResuming from loaded model\n")
     except (ImportError, IOError, ValueError) as e:
         print(e)
@@ -114,9 +118,10 @@ def save_model(
     # since metric states are not preserved by Model.save_weights
     vae.reset_metrics()
     # Save the model
-    vae.save_weights(os.path.join(model_path, 'vae',""), save_format='tf')
+    vae.save_weights(os.path.join(model_path, 'vae', ""), save_format='tf')
     encoder.save(os.path.join(model_path, 'encoder'))
     decoder.save(os.path.join(model_path, 'decoder'))
+
 
 def make_model(
             original_dim,
@@ -126,7 +131,6 @@ def make_model(
             epsilon_std
         ):
     """Define the Variational Autoencoder model and return it."""
-
     # Define the Decoder (Latent --> Reconstructed Image)
     decoder = Sequential([
         Dense(interm_dim, input_dim=latent_dim, activation='relu'),

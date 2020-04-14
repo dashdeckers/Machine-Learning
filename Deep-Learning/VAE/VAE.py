@@ -1,11 +1,11 @@
+"""Main file."""
 import math
 import os
-import tensorflow as tf
-import numpy as np
 import json
 
 from data import get_data
-from model import CustomCallback, gpu_configuration, make_model, load_model, save_model
+from model import CustomCallback, gpu_configuration, make_model
+from model import load_model, save_model
 
 # Define experiments
 stanford_dogs = {
@@ -19,7 +19,7 @@ stanford_dogs = {
     'epsilon_std': 1.0,
     'model_path': 'models_dogs',
     'checkpoint': 100,
-    'resume' : True,
+    'resume': True,
 }
 
 mnist = {
@@ -33,7 +33,7 @@ mnist = {
     'epsilon_std': 1.0,
     'model_path': 'models_mnist',
     'checkpoint': 0,
-    'resume' : True,
+    'resume': True,
 }
 
 
@@ -97,9 +97,9 @@ def main(
         validation_data=test,
         validation_steps=val_steps,
         callbacks=[CustomCallback(
-                path=model_path, 
-                checkpoint=checkpoint, 
-                encoder=encoder, 
+                path=model_path,
+                checkpoint=checkpoint,
+                encoder=encoder,
                 decoder=decoder,
             )],
     )
@@ -112,10 +112,11 @@ def main(
         model_path=model_path,
     )
     # Save the experiment details
-    dict = mnist if dataset=="mnist" else stanford_dogs
+    dict = mnist if dataset == "mnist" else stanford_dogs
 
-    with open(os.path.join(model_path,'experiment.json'), 'w') as outfile:
+    with open(os.path.join(model_path, 'experiment.json'), 'w') as outfile:
         json.dump(dict, outfile)
+
 
 if __name__ == '__main__':
     main(**stanford_dogs)
