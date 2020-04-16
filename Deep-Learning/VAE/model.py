@@ -138,13 +138,16 @@ def make_model(
     ])
 
     # Define the Encoder (Original Image --> Latent)
+    # Input of the encoder
     x = Input(shape=(original_dim, ))
+    # Hidden layer
     h = Dense(interm_dim, activation='relu')(x)
-
+    # Mean and log variance (output of the encoder)
     z_mu = Dense(latent_dim)(h)
     z_log_var = Dense(latent_dim)(h)
 
     z_mu, z_log_var = KLDivergenceLayer()([z_mu, z_log_var])
+    # Normalize the log variance to std dev
     z_sigma = Lambda(lambda t: K.exp(.5*t))(z_log_var)
 
     eps = K.random_normal(stddev=epsilon_std,
