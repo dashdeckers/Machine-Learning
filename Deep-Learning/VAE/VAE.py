@@ -19,7 +19,6 @@ stanford_dogs = {
     'epsilon_std': 1.0,
     'model_path': 'models_dogs',
     'checkpoint': 100,
-    'resume': True,
 }
 
 mnist = {
@@ -33,7 +32,6 @@ mnist = {
     'epsilon_std': 1.0,
     'model_path': 'models_mnist',
     'checkpoint': 0,
-    'resume': True,
 }
 
 
@@ -48,7 +46,6 @@ def main(
             epsilon_std,
             model_path,
             checkpoint,
-            resume
         ):
     """Run the experiment."""
     original_dim = im_shape[0] * im_shape[1] * channels
@@ -67,20 +64,20 @@ def main(
     # Setup GPU options
     gpu_configuration()
 
-    if resume:
-        vae, encoder, decoder, resume = load_model(
-                                            original_dim=original_dim,
-                                            interm_dim=interm_dim,
-                                            latent_dim=latent_dim,
-                                            epochs=epochs,
-                                            epsilon_std=epsilon_std,
-                                            model_path=model_path,
-                                            resume=resume,
-                                            train=train,
-                                        )
-    if not resume:
-        # Make the model
-        print("********************************")
+    # Load the model
+    vae, encoder, decoder, = load_model(
+        original_dim=original_dim,
+        interm_dim=interm_dim,
+        latent_dim=latent_dim,
+        epochs=epochs,
+        epsilon_std=epsilon_std,
+        model_path=model_path,
+        train=train,
+    )
+
+    # Or create the model
+    if any([item is None for item in [vae, encoder, decoder]]):
+        print('*' * 35)
         vae, encoder, decoder = make_model(
             original_dim=original_dim,
             interm_dim=interm_dim,

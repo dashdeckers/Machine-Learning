@@ -76,15 +76,18 @@ def gpu_configuration():
 
 
 def load_model(
-        original_dim,
-        interm_dim,
-        latent_dim,
-        epochs,
-        epsilon_std,
-        model_path,
-        resume,
-        train):
+            original_dim,
+            interm_dim,
+            latent_dim,
+            epochs,
+            epsilon_std,
+            model_path,
+            train
+        ):
     try:
+        # If there is already a model at the given folder, try resuming
+        assert os.path.isdir(model_path), f'No directory at {model_path}'
+
         # Load the en/decoder, create the VAE and load its weights
         encoder = tf.keras.models.load_model(
             os.path.join(model_path, 'encoder')
@@ -104,13 +107,18 @@ def load_model(
         # Load the state of the old model
         vae.load_weights(os.path.join(model_path, 'vae', ""))
         print(f"\nResuming from loaded model at {model_path}\n")
+
+    except AssertionError as e:
+        print(e)
+        print(f"\nCreating a new model at {model_path}\n")
+        return None, None, None
+
     except (ImportError, IOError, ValueError) as e:
         print(e)
-        print("\nContinuing with creating new model\n")
-        resume = False
-        return None, None, None, resume
+        print(f"\nTried resuming from {model_path} but something went wrong\n")
+        sys.exit()
 
-    return vae, encoder, decoder, resume
+    return vae, encoder, decoder
 
 
 def save_model(
