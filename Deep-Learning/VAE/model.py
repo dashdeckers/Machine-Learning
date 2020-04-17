@@ -19,19 +19,22 @@ def nll(y_true, y_pred):
 class KLDivergenceLayer(Layer):
     """Identity transform layer that adds KL divergence to the final loss."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, beta, *args, **kwargs):
         self.is_placeholder = True
+        self.beta = beta
         super(KLDivergenceLayer, self).__init__(*args, **kwargs)
 
     def call(self, inputs):
 
         mu, log_var = inputs
 
-        kl_batch = (
-            - 0.5
-            * K.sum(1 + log_var - K.square(mu) - K.exp(log_var), axis=-1)
-        )
-
+        kl_batch = - .5 * K.sum(1 + log_var -
+                                K.square(mu) -
+                                K.exp(log_var), axis=-1)
+        
+        # Multiply KLD component with Beta factor
+        kl_batch *= self.beta
+        
         self.add_loss(K.mean(kl_batch), inputs=inputs)
 
         return inputs
@@ -81,6 +84,7 @@ def load_model(
             latent_dim,
             epochs,
             epsilon_std,
+            beta,
             model_path,
             train
         ):
@@ -101,6 +105,7 @@ def load_model(
             latent_dim=latent_dim,
             epochs=epochs,
             epsilon_std=epsilon_std,
+            beta=beta,
         )
         vae.compile(optimizer='rmsprop', loss=nll)
 
@@ -141,23 +146,29 @@ def make_model(
             interm_dim,
             latent_dim,
             epochs,
-            epsilon_std
+            epsilon_std,
+            beta
         ):
     """Define the Variational Autoencoder model and return it."""
     # Define the Decoder (Latent --> Reconstructed Image)
     decoder = Sequential([
-        Dense(interm_dim, input_dim=latent_dim, activation='relu'),
+        Dense(int(interm_dim / 2), input_dim=latent_dim, activation='relu'),
+        Dense(interm_dim, input_dim=int(interm_dim / 2), activation='relu'),
         Dense(original_dim, activation='sigmoid')
     ])
 
     # Define the Encoder (Original Image --> Latent)
+    # Input of the encoder
     x = Input(shape=(original_dim, ))
-    h = Dense(interm_dim, activation='relu')(x)
+    # Hidden layer
+    h1 = Dense(interm_dim, activation='relu')(x)
+    h2 = Dense(int(interm_dim / 2), activation='relu')(h1)
+    # Mean and log variance (output of the encoder)
+    z_mu = Dense(latent_dim)(h2)
+    z_log_var = Dense(latent_dim)(h2)
 
-    z_mu = Dense(latent_dim)(h)
-    z_log_var = Dense(latent_dim)(h)
-
-    z_mu, z_log_var = KLDivergenceLayer()([z_mu, z_log_var])
+    z_mu, z_log_var = KLDivergenceLayer(beta=beta)([z_mu, z_log_var])
+    # Normalize the log variance to std dev
     z_sigma = Lambda(lambda t: K.exp(.5*t))(z_log_var)
 
     eps = K.random_normal(stddev=epsilon_std,

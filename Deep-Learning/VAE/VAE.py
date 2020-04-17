@@ -12,11 +12,12 @@ stanford_dogs = {
     'dataset': 'stanford_dogs',
     'im_shape': (32, 32),
     'channels': 3,
-    'interm_dim': 256,
-    'latent_dim': 15,
+    'interm_dim': 512,
+    'latent_dim': 30,
     'batch_size': 512,
     'epochs': 3600,
     'epsilon_std': 1.0,
+    'beta': 1.0,
     'model_path': 'models_dogs',
     'checkpoint': 100,
 }
@@ -30,6 +31,7 @@ mnist = {
     'batch_size': 512,
     'epochs': 20,
     'epsilon_std': 1.0,
+    'beta': 1.0,
     'model_path': 'models_mnist',
     'checkpoint': 0,
 }
@@ -44,6 +46,7 @@ def main(
             batch_size,
             epochs,
             epsilon_std,
+            beta,
             model_path,
             checkpoint,
         ):
@@ -71,6 +74,7 @@ def main(
         latent_dim=latent_dim,
         epochs=epochs,
         epsilon_std=epsilon_std,
+        beta=beta,
         model_path=model_path,
         train=train,
     )
@@ -84,6 +88,7 @@ def main(
             latent_dim=latent_dim,
             epochs=epochs,
             epsilon_std=epsilon_std,
+            beta=beta,
         )
 
     # Train the model
