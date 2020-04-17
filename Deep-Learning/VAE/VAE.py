@@ -1,16 +1,16 @@
 """Main file."""
+import json
 import math
 import os
-import json
 
 from data import get_data
-from model import CustomCallback, gpu_configuration, make_model
-from model import load_model, save_model
+from model import (CustomCallback, gpu_configuration, load_model, make_model,
+                   save_model)
 
 # Define experiments
 stanford_dogs = {
     'dataset': 'stanford_dogs',
-    'im_shape': (32, 32),  # (32, 32)
+    'im_shape': (32, 32),
     'channels': 3,
     'interm_dim': 256,
     'latent_dim': 15,
@@ -97,11 +97,11 @@ def main(
         validation_data=test,
         validation_steps=val_steps,
         callbacks=[CustomCallback(
-                path=model_path,
-                checkpoint=checkpoint,
-                encoder=encoder,
-                decoder=decoder,
-            )],
+            path=model_path,
+            checkpoint=checkpoint,
+            encoder=encoder,
+            decoder=decoder,
+        )],
     )
 
     # Save the model
@@ -111,11 +111,10 @@ def main(
         decoder=decoder,
         model_path=model_path,
     )
-    # Save the experiment details
-    dict = mnist if dataset == "mnist" else stanford_dogs
 
+    # Save the experiment details
     with open(os.path.join(model_path, 'experiment.json'), 'w') as outfile:
-        json.dump(dict, outfile)
+        json.dump(globals()[dataset], outfile)
 
 
 if __name__ == '__main__':

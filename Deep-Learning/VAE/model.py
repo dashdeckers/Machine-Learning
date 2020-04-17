@@ -1,11 +1,12 @@
 """Define the VAE model, saving, loading, layers and custom callbacks."""
 import os
-import tensorflow as tf
+import sys
 
+import tensorflow as tf
 from tensorflow.keras import backend as K
+from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
 from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.callbacks import Callback
 
 
 def nll(y_true, y_pred):
@@ -26,9 +27,10 @@ class KLDivergenceLayer(Layer):
 
         mu, log_var = inputs
 
-        kl_batch = - .5 * K.sum(1 + log_var -
-                                K.square(mu) -
-                                K.exp(log_var), axis=-1)
+        kl_batch = (
+            - 0.5
+            * K.sum(1 + log_var - K.square(mu) - K.exp(log_var), axis=-1)
+        )
 
         self.add_loss(K.mean(kl_batch), inputs=inputs)
 
@@ -48,14 +50,16 @@ class CustomCallback(Callback):
         # Checkpoint - Save every X epochs
         if self.checkpoint == 0:
             return
+
         if epoch % self.checkpoint == 0:
             print("\nSaving the model at epoch: ", epoch+1)
             save_model(
-                    vae=self.model,
-                    encoder=self.encoder,
-                    decoder=self.decoder,
-                    model_path=self.model_path,
-                )
+                vae=self.model,
+                encoder=self.encoder,
+                decoder=self.decoder,
+                model_path=self.model_path,
+            )
+
     # Catch if no callbacks are enabled
     lambda *_, **__: None
 
@@ -81,10 +85,12 @@ def load_model(
         train):
     try:
         # Load the en/decoder, create the VAE and load its weights
-        encoder = tf.keras.models.load_model(os.path.join(
-                                                model_path, 'encoder'))
-        decoder = tf.keras.models.load_model(os.path.join(
-                                                model_path, 'decoder'))
+        encoder = tf.keras.models.load_model(
+            os.path.join(model_path, 'encoder')
+        )
+        decoder = tf.keras.models.load_model(
+            os.path.join(model_path, 'decoder')
+        )
         vae, _, _ = make_model(
             original_dim=original_dim,
             interm_dim=interm_dim,
@@ -93,12 +99,10 @@ def load_model(
             epsilon_std=epsilon_std,
         )
         vae.compile(optimizer='rmsprop', loss=nll)
-        # Train on a single batch to initialize the variables used by
-        # the optimizers, as well as any stateful metric variables.
-        # vae.train_on_batch(train)
+
         # Load the state of the old model
         vae.load_weights(os.path.join(model_path, 'vae', ""))
-        print("\nResuming from loaded model\n")
+        print(f"\nResuming from loaded model at {model_path}\n")
     except (ImportError, IOError, ValueError) as e:
         print(e)
         print("\nContinuing with creating new model\n")
