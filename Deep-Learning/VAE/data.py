@@ -4,6 +4,7 @@ from functools import partial
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
+from tqdm import tqdm
 
 def preprocessing(data, im_shape, labels=False):
     """Cast images to tensorflow format."""
@@ -19,6 +20,32 @@ def preprocessing(data, im_shape, labels=False):
     else:
         return image, image
 
+def crop_dogs(data):
+    """Use the bounding box annotations to crop the dogs from the images."""
+    print("Cropping dogs...")
+    for elem in tqdm(data):
+        image = elem["image"]
+        image_height, image_width = image.shape[0], image.shape[1]
+
+        # Only use the first dog (some images have multiple)
+        bbox = elem["objects"]["bbox"][0]
+
+        # Calculate the offsets in pixels
+        offset_h = int((bbox[0] * image_height).numpy())
+        offset_w = int((bbox[1] * image_width).numpy())
+
+        # Calculate the target dimensions in pixels
+        # Note that the annotations are of the form [xmin, ymin, xmax, ymax]
+        # crop_to_bounding_box expects the form [xmin, ymin, width, height]
+        # Therefore we must subtract the offset.
+        target_h = int((bbox[2] * image_height).numpy() - offset_h)
+        target_w = int((bbox[3] * image_width).numpy() - offset_w)
+
+        # Crop
+        elem["image"] = tf.image.crop_to_bounding_box(image, offset_h, offset_w, target_h, target_w)
+
+    print("Done.")
+    return data
 
 def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
     """Load the Stanford Dogs dataset from TensorFlow and return it."""
@@ -30,10 +57,14 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
         with_info=True,
     )
 
+    crop_dogs(train_data)
+
     test_data = tfds.load(
         name=dataset,
         split="test",
     )
+
+    crop_dogs(test_data)
 
     train = (
         train_data.cache()
