@@ -7,6 +7,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
 from tensorflow.keras.models import Model, Sequential
+from tensorflow.python.framework.errors_impl import NotFoundError
 
 
 def nll(y_true, y_pred):
@@ -113,7 +114,7 @@ def load_model(
         vae.load_weights(os.path.join(model_path, 'vae', ""))
         print(f"\nResuming from loaded model at {model_path}\n")
 
-    except AssertionError as e:
+    except (AssertionError, NotFoundError) as e:
         print(e)
         print(f"\nCreating a new model at {model_path}\n")
         return None, None, None
