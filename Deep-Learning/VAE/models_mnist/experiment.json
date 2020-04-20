@@ -1,1 +1,1 @@
-{"dataset": "mnist", "im_shape": [28, 28], "channels": 1, "interm_dim": 256, "latent_dim": 2, "batch_size": 512, "epochs": 20, "epsilon_std": 1.0, "beta": 2.0, "model_path": "models_mnist", "checkpoint": 0, "resume": true}
+{"dataset": "mnist", "im_shape": [28, 28], "channels": 1, "interm_dim": 256, "latent_dim": 2, "batch_size": 512, "epochs": 10, "epsilon_std": 1.0, "beta": 1.0, "model_path": "models_mnist", "checkpoint": 0}

@@ -3,6 +3,9 @@ import os
 import sys
 
 import tensorflow as tf
+
+from datetime import datetime
+from tensorflow import keras
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
@@ -39,6 +42,17 @@ class KLDivergenceLayer(Layer):
         self.add_loss(K.mean(kl_batch), inputs=inputs)
 
         return inputs
+
+
+def getTensorboardCallback(path):
+    """Create a Tensorboard at model_path/logs."""
+    tensorboard_callback = keras.callbacks.TensorBoard(
+        log_dir=os.path.join(
+            path, "logs",
+            datetime.now().strftime("%Y%m%d-%H%M%S")
+        )
+    )
+    return tensorboard_callback
 
 
 class CustomCallback(Callback):
