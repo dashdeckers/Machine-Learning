@@ -6,6 +6,7 @@ import tensorflow_datasets as tfds
 
 from tqdm import tqdm
 
+
 def preprocessing(data, im_shape, labels=False):
     """Cast images to tensorflow format."""
     image = tf.cast(data["image"], tf.float32)
@@ -19,6 +20,7 @@ def preprocessing(data, im_shape, labels=False):
         return image, data["label"]
     else:
         return image, image
+
 
 def crop_dogs(data):
     """Use the bounding box annotations to crop the dogs from the images."""
@@ -42,10 +44,13 @@ def crop_dogs(data):
         target_w = int((bbox[3] * image_width).numpy() - offset_w)
 
         # Crop
-        elem["image"] = tf.image.crop_to_bounding_box(image, offset_h, offset_w, target_h, target_w)
+        elem["image"] = tf.image.crop_to_bounding_box(
+            image, offset_h, offset_w, target_h, target_w
+        )
 
     print("Done.")
     return data
+
 
 def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
     """Load the Stanford Dogs dataset from TensorFlow and return it."""
@@ -57,14 +62,13 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
         with_info=True,
     )
 
-    crop_dogs(train_data)
-
     test_data = tfds.load(
         name=dataset,
         split="test",
     )
-
-    crop_dogs(test_data)
+    if dataset == 'stanford_dogs':
+        crop_dogs(train_data)
+        crop_dogs(test_data)
 
     train = (
         train_data.cache()

@@ -29,7 +29,7 @@ mnist = {
     'interm_dim': 256,
     'latent_dim': 2,
     'batch_size': 512,
-    'epochs': 20,
+    'epochs': 100,
     'epsilon_std': 1.0,
     'beta': 1.0,
     'model_path': 'models_mnist',
@@ -92,7 +92,7 @@ def main(
         )
 
     # Train the model
-    vae.fit(
+    history = vae.fit(
         train,
         epochs=epochs,
         steps_per_epoch=steps_per_epoch,
@@ -105,6 +105,8 @@ def main(
             decoder=decoder,
         )],
     )
+
+    print(history)
 
     # Save the model
     save_model(
@@ -120,5 +122,5 @@ def main(
 
 
 if __name__ == '__main__':
-    main(**stanford_dogs)
-    # main(**mnist)
+    # main(**stanford_dogs)
+    main(**mnist)
