@@ -3,7 +3,6 @@ from functools import partial
 
 import tensorflow as tf
 import tensorflow_datasets as tfds
-
 from tqdm import tqdm
 
 
@@ -66,6 +65,7 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
         name=dataset,
         split="test",
     )
+
     if dataset == 'stanford_dogs':
         crop_dogs(train_data)
         crop_dogs(test_data)

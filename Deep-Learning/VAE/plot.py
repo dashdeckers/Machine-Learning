@@ -10,7 +10,6 @@ from VAE import mnist, stanford_dogs  # noqa
 
 # Load experiment variables
 experiment = stanford_dogs
-# experiment = stanford_dogs
 
 model_path = experiment['model_path']
 im_shape = experiment['im_shape']
@@ -64,7 +63,7 @@ def make_latent_grid(
             n,
             show_all_dims
         ):
-    """ Make a grid of latent variables to be plotted.
+    """Make a grid of latent variables to be plotted.
 
     For either a grid exploring the interaction between 2 dimensions
     Or a grid exploring all different dimensions without interactions.
