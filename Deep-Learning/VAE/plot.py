@@ -9,7 +9,7 @@ from scipy.stats import norm
 from VAE import mnist, stanford_dogs  # noqa
 
 # Load experiment variables
-experiment = mnist
+experiment = stanford_dogs
 # experiment = stanford_dogs
 
 model_path = experiment['model_path']
@@ -58,12 +58,83 @@ def plot_digit_classes_in_latent_space(encoder, im_shape, dataset):
     plt.show()
 
 
+def make_latent_grid(
+            latent_dim,
+            latent_indices,
+            n,
+            show_all_dims
+        ):
+    """ Make a grid of latent variables to be plotted.
+
+    For either a grid exploring the interaction between 2 dimensions
+    Or a grid exploring all different dimensions without interactions.
+
+    This functions creates a grid of variables to fill a latent space.
+
+    When showing all dimensions all latent spaces get set to 1,
+    but in each row 1 latent variable explores a range.
+    This make a row for each latent dim exploring their effect.
+    This gives a latent_dim x n grid of images.
+
+    When !show_all_dims 2 latent indices can be given.
+    This indices will get a range set against eachother.
+    All other variables will remain at 1.
+    This gives a nxn grid of images.
+
+    This functions returns the latent variables for each slot in a grid.
+    As well as the number of images the grid is wide and high.
+    """
+    # Create the 2 layers for the values for (z1, z2)
+    if show_all_dims:
+        # We take 1 linspace as we only explore variable at each row
+        u_grid = np.dstack(np.linspace(0.05, 0.95, n))
+    else:
+        u_grid = np.dstack(np.meshgrid(np.linspace(0.05, 0.95, n),
+                                       np.linspace(0.05, 0.95, n)))
+
+    # Make them normally distributed (from [0, 1] to [-1, -1])
+    z_grid = norm.ppf(u_grid)
+
+    if show_all_dims:
+        range_grid = z_grid[0, :, :]
+        z_grid = np.ndarray(shape=[0, n, latent_dim])
+        # For each dimension we add a row with a set of all dimensions
+        for j in range(latent_dim):
+            stack_list = list()
+            for idx in range(latent_dim):
+                if idx == j:
+                    # Each row has 1 variable which gets the range
+                    stack_list.append(range_grid)
+                else:
+                    # All other variables simply get 1 throughout in the row
+                    stack_list.append(np.ones(shape=(1, n)))
+            new = np.dstack(stack_list)
+            # Put all the rows exploring different vars together
+            z_grid = np.append(z_grid, new, axis=0)
+        assert z_grid.shape == (latent_dim, n, latent_dim)
+        return z_grid, latent_dim, n
+    else:
+        z_grid_1, z_grid_2 = np.dsplit(z_grid, 2)
+        stack_list = list()
+        for idx in range(latent_dim):
+            if idx == latent_indices[1]:
+                stack_list.append(z_grid_1)
+            elif idx == latent_indices[1]:
+                stack_list.append(z_grid_2)
+            else:
+                stack_list.append(np.ones(shape=(n, n)))
+        z_grid = np.dstack(stack_list)
+        assert z_grid.shape == (n, n, latent_dim)
+        return z_grid, n, n
+
+
 def plot_2D_manifold_of_latent_variables(
             decoder,
             latent_dim,
             latent_indices,
             channels,
-            im_shape
+            im_shape,
+            show_all_dims=False
         ):
     """Plot a 2D manifold of latent variables.
 
@@ -92,46 +163,28 @@ def plot_2D_manifold_of_latent_variables(
     n = 15
     size = im_shape[0]
 
-    # Create the 2 layers for the values for (z1, z2)
-    u_grid = np.dstack(np.meshgrid(np.linspace(0.05, 0.95, n),
-                                   np.linspace(0.05, 0.95, n)))
-    # Make them normally distributed (from [0, 1] to [-1, -1])
-    z_grid = norm.ppf(u_grid)
-
-    # Put them together with the zero layers
-    z_grid_1, z_grid_2 = np.dsplit(z_grid, 2)
-    stack_list = list()
-
-    for idx in range(latent_dim):
-        if idx == latent_indices[0]:
-            stack_list.append(z_grid_1)
-        elif idx == latent_indices[1]:
-            stack_list.append(z_grid_2)
-        else:
-            stack_list.append(np.ones(shape=(n, n)))
-
-    z_grid = np.dstack(stack_list)
-    assert z_grid.shape == (n, n, latent_dim)
+    z_grid, width, height = make_latent_grid(latent_dim, latent_indices,
+                                             n, show_all_dims)
 
     # Get predictions
-    x_decoded = decoder.predict(z_grid.reshape(n * n, latent_dim))
+    x_decoded = decoder.predict(z_grid.reshape(width * height, latent_dim))
 
     # If we only have one image channel, creating the image grid is easy
     if channels == 1:
-        x_decoded = x_decoded.reshape(n, n, size, size)
+        x_decoded = x_decoded.reshape(width, height, size, size)
         image_grid = np.block(list(map(list, x_decoded)))
-        assert image_grid.shape == (n * size, n * size)
+        assert image_grid.shape == (width * size, height * size)
         cmap = 'gray'
 
     # With 3 channels, it is slightly different
     elif channels == 3:
-        x_decoded = x_decoded.reshape(n, n, size, size, channels)
+        x_decoded = x_decoded.reshape(width, height, size, size, channels)
         image_grid = np.dstack((
             np.block(list(map(list, x_decoded[:, :, :, :, 0]))),
             np.block(list(map(list, x_decoded[:, :, :, :, 1]))),
             np.block(list(map(list, x_decoded[:, :, :, :, 2]))),
         ))
-        assert image_grid.shape == (n * size, n * size, 3)
+        assert image_grid.shape == (width * size, height * size, 3)
         cmap = 'viridis'
 
     # Plot the manifold
@@ -162,6 +215,18 @@ def plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape):
         )
 
 
+def plot_independent_grid(decoder, latent_dim, channels, im_shape):
+    plot_2D_manifold_of_latent_variables(
+        decoder,
+        latent_dim,
+        [0, 1],
+        channels,
+        im_shape,
+        show_all_dims=True
+    )
+
+
 if __name__ == '__main__':
     # Use CTRL+C to quit early
-    plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape)
+    # plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape)
+    plot_independent_grid(decoder, latent_dim, channels, im_shape)

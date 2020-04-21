@@ -4,9 +4,8 @@ import math
 import os
 
 from data import get_data
-from model import (CustomCallback, gpu_configuration, load_model, make_model,
-                   save_model)
-
+from model import (CustomCallback, getTensorboardCallback, gpu_configuration,
+                   load_model, make_model, save_model)
 # Define experiments
 stanford_dogs = {
     'dataset': 'stanford_dogs',
@@ -29,7 +28,7 @@ mnist = {
     'interm_dim': 256,
     'latent_dim': 2,
     'batch_size': 512,
-    'epochs': 20,
+    'epochs': 10,
     'epsilon_std': 1.0,
     'beta': 1.0,
     'model_path': 'models_mnist',
@@ -103,7 +102,11 @@ def main(
             checkpoint=checkpoint,
             encoder=encoder,
             decoder=decoder,
-        )],
+            ),
+            getTensorboardCallback(
+                path=model_path,
+            )
+        ],
     )
 
     # Save the model
@@ -120,5 +123,5 @@ def main(
 
 
 if __name__ == '__main__':
-    main(**stanford_dogs)
-    # main(**mnist)
+    # main(**stanford_dogs)
+    main(**mnist)
