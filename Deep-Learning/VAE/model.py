@@ -31,10 +31,10 @@ class KLDivergenceLayer(Layer):
         kl_batch = - .5 * K.sum(1 + log_var -
                                 K.square(mu) -
                                 K.exp(log_var), axis=-1)
-        
+
         # Multiply KLD component with Beta factor
         kl_batch *= self.beta
-        
+
         self.add_loss(K.mean(kl_batch), inputs=inputs)
 
         return inputs
@@ -171,9 +171,11 @@ def make_model(
     # Normalize the log variance to std dev
     z_sigma = Lambda(lambda t: K.exp(.5*t))(z_log_var)
 
-    eps = K.random_normal(stddev=epsilon_std,
-                          shape=(K.shape(x)[0], latent_dim),
-                          seed=42)
+    eps = K.random_normal(
+        stddev=epsilon_std,
+        shape=(K.shape(x)[0], latent_dim),
+        seed=42
+    )
     z_eps = Multiply()([z_sigma, eps])
     z = Add()([z_mu, z_eps])
 
