@@ -8,19 +8,6 @@ from data import get_data
 from scipy.stats import norm
 from VAE import mnist, stanford_dogs  # noqa
 
-# Load experiment variables
-experiment = stanford_dogs
-
-model_path = experiment['model_path']
-im_shape = experiment['im_shape']
-channels = experiment['channels']
-latent_dim = experiment['latent_dim']
-dataset = experiment['dataset']
-
-# Load the saved model
-encoder = tf.keras.models.load_model(os.path.join(model_path, 'encoder'))
-decoder = tf.keras.models.load_model(os.path.join(model_path, 'decoder'))
-
 
 def plot_digit_classes_in_latent_space(encoder, im_shape, dataset):
     """Plot digit classes in 2D latent space.
@@ -31,7 +18,6 @@ def plot_digit_classes_in_latent_space(encoder, im_shape, dataset):
     To generalize to more latent dimensions, maybe use a Kohonen map or just
     compare the final metrics of clustering algorithms in N-d space.
     """
-    assert experiment == mnist, 'Currently only supports MNIST'
 
     # Get some labelled testing data
     _, test, _ = get_data(
@@ -218,7 +204,7 @@ def plot_independent_grid(decoder, latent_dim, channels, im_shape):
     plot_2D_manifold_of_latent_variables(
         decoder,
         latent_dim,
-        [0, 1],
+        (0, 1),
         channels,
         im_shape,
         show_all_dims=True
@@ -226,6 +212,19 @@ def plot_independent_grid(decoder, latent_dim, channels, im_shape):
 
 
 if __name__ == '__main__':
+    # Load experiment variables
+    experiment = mnist
+
+    model_path = experiment['model_path']
+    im_shape = experiment['im_shape']
+    channels = experiment['channels']
+    latent_dim = experiment['latent_dim']
+    dataset = experiment['dataset']
+
+    # Load the saved model
+    encoder = tf.keras.models.load_model(os.path.join(model_path, 'encoder'))
+    decoder = tf.keras.models.load_model(os.path.join(model_path, 'decoder'))
+
     # Use CTRL+C to quit early
     # plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape)
     plot_independent_grid(decoder, latent_dim, channels, im_shape)
