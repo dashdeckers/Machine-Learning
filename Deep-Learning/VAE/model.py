@@ -1,10 +1,9 @@
 """Define the VAE model, saving, loading, layers and custom callbacks."""
 import os
 import sys
+from datetime import datetime
 
 import tensorflow as tf
-
-from datetime import datetime
 from tensorflow import keras
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import Callback

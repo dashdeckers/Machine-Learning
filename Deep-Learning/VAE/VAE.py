@@ -6,6 +6,7 @@ import os
 from data import get_data
 from model import (CustomCallback, getTensorboardCallback, gpu_configuration,
                    load_model, make_model, save_model)
+
 # Define experiments
 stanford_dogs = {
     'dataset': 'stanford_dogs',
@@ -97,11 +98,12 @@ def main(
         steps_per_epoch=steps_per_epoch,
         validation_data=test,
         validation_steps=val_steps,
-        callbacks=[CustomCallback(
-            path=model_path,
-            checkpoint=checkpoint,
-            encoder=encoder,
-            decoder=decoder,
+        callbacks=[
+            CustomCallback(
+                path=model_path,
+                checkpoint=checkpoint,
+                encoder=encoder,
+                decoder=decoder,
             ),
             getTensorboardCallback(
                 path=model_path,
