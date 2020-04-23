@@ -13,7 +13,7 @@ def preprocessing(data, im_shape, labels=False):
     image = image / 255.0
     # Resize the image
     image = tf.image.resize(image, im_shape)
-    image = tf.reshape(image, [-1])
+    # image = tf.reshape(image, [-1])
 
     if labels:
         return image, data["label"]
