@@ -16,7 +16,7 @@ exp = {
     'batch_size': 64,
     'epochs': 10,
     'beta': 1.0,
-    'model_path': 'mnist_new',
+    'model_path': 'mnist_1',
     'checkpoint_format': '{epoch:02d}-{val_loss:.2f}.h5',
 }
 
@@ -61,25 +61,51 @@ class Encoder(tf.keras.Model):
         self.latent_dim = latent_dim
 
     def build(self, input_shape):
+        # First two convolutional layers to capture image data
+        self.conv1 = layers.Conv2D(
+            input_shape=input_shape,
+            data_format='channels_last',
+            filters=32,
+            kernel_size=2,
+            padding='same',
+            activation='relu',
+            name='Conv-1',
+        )
+        self.conv2 = layers.Conv2D(
+            filters=64,
+            kernel_size=2,
+            padding='same',
+            activation='relu',
+            strides=(2, 2),
+            name='Conv-2',
+        )
         self.flatten = layers.Flatten()
-        self.dense1 = layers.Dense(256, activation='relu')
-        self.dense2 = layers.Dense(128, activation='relu')
+        # self.flatten = layers.Flatten()
+        # self.dense1 = layers.Dense(256, activation='relu')
+        # self.dense2 = layers.Dense(128, activation='relu')
 
-        # The split with two dense outputs for (z_mean, z_log_var)
-        self.dense_mean = layers.Dense(units=self.latent_dim)
-        self.dense_log_var = layers.Dense(units=self.latent_dim)
-
+        # Then a split with two dense outputs for (z_mean, z_log_var)
+        self.dense_mean = layers.Dense(
+            units=self.latent_dim,
+            # activation='linear'
+        )
+        self.dense_log_var = layers.Dense(
+            units=self.latent_dim,
+            # activation='linear'
+        )
         # Sample (z) from (z_mean, z_log_var)
         self.sampling = Sampling(latent_dim=self.latent_dim)
 
         show_shapes(
             input_shape,
-            [self.flatten, self.dense1, self.dense2, self.dense_mean],
+            # [self.flatten, self.dense1, self.dense2, self.dense_mean],
+            [self.conv1, self.conv2, self.flatten, self.dense_mean],
             name='Encoder'
         )
 
     def call(self, inputs):
-        out = self.dense2(self.dense1(self.flatten(inputs)))
+        out = self.flatten(self.conv2(self.conv1(inputs)))
+        # out = self.dense2(self.dense1(self.flatten(inputs)))
 
         z_mean = self.dense_mean(out)
         z_log_var = self.dense_log_var(out)
@@ -100,19 +126,49 @@ class Decoder(tf.keras.Model):
     def build(self, input_shape):
         assert input_shape[1:] == (self.latent_dim), input_shape[1:]
 
-        self.dense1 = layers.Dense(128, activation='relu')
-        self.dense2 = layers.Dense(256, activation='relu')
-        self.dense3 = layers.Dense(self.col_dim, activation='sigmoid')
+        # First, make a dense layer with the necessary amount of units
+        self.expand = layers.Dense(
+            units=self.col_dim,
+            activation='relu'
+        )
+        # Then reshape it into the image dimensions
         self.reshape = layers.Reshape(target_shape=self.im_dim)
+
+        # Deconvolutional layers to do some decoding
+        # TODO: Not 100% sure about this DeConv architecture tbh
+        self.deconv1 = layers.Conv2DTranspose(
+            filters=64,
+            kernel_size=3,
+            strides=(1, 1),
+            padding='same',
+            activation='relu',
+            name='DeConv-1',
+        )
+
+        self.deconv2 = layers.Conv2DTranspose(
+            filters=1,
+            kernel_size=3,
+            strides=(1, 1),
+            padding='same',
+            name='DeConv-3',
+        )
+        # self.dense1 = layers.Dense(128, activation='relu')
+        # self.dense2 = layers.Dense(256, activation='relu')
+        # self.dense3 = layers.Dense(self.col_dim, activation='sigmoid')
+        # self.reshape = layers.Reshape(target_shape=self.im_dim)
 
         show_shapes(
             input_shape,
-            [self.dense1, self.dense2, self.dense3, self.reshape],
+            # [self.dense1, self.dense2, self.dense3, self.reshape],
+            [self.expand, self.reshape, self.deconv1, self.deconv2],
             name='Decoder'
         )
 
     def call(self, inputs):
-        return self.reshape(self.dense3(self.dense2(self.dense1(inputs))))
+        # return self.reshape(self.dense3(self.dense2(self.dense1(inputs))))
+        expanded = self.reshape(self.expand(inputs))
+        deconvolved = self.deconv2(self.deconv1(expanded))
+        return deconvolved
 
 
 class VariationalAutoEncoder(tf.keras.Model):
@@ -213,7 +269,7 @@ train, test, info = get_data(
     batch_size=exp['batch_size'],
     im_shape=exp['im_shape'],
     dataset=exp['dataset'],
-)  # We are assuming 2D input here, comment out the reshape line in data.py
+)
 
 
 # Create, train and evaluate the model
