@@ -16,20 +16,21 @@ exp = {
     'batch_size': 64,
     'epochs': 10,
     'beta': 1.0,
-    'model_path': 'mnist_1',
+    'model_path': 'mnist_2',
     'checkpoint_format': '{epoch:02d}-{val_loss:.2f}.h5',
 }
 
 
-def show_shapes(input_shape, layers, name):
+def show_shapes(input_shape, layer_list, name):
     # Basic visualization of tensor shapes to track architecture and flow.
     # Layers must be successive starting from input_shape or it won't work.
     print('')
+
     shapes = [input_shape]
-    for layer in layers:
+    for layer in layer_list:
         shapes.append(layer.compute_output_shape(shapes[-1]))
-    print(name + ':', ' --> '.join([str(s[1:]) for s in shapes]))
-    print('')
+
+    print(f'{name}:', ' --> '.join([str(s[1:]) for s in shapes]), '\n')
 
 
 class Sampling(layers.Layer):
@@ -62,55 +63,50 @@ class Encoder(tf.keras.Model):
 
     def build(self, input_shape):
         # First two convolutional layers to capture image data
-        self.conv1 = layers.Conv2D(
-            input_shape=input_shape,
-            data_format='channels_last',
-            filters=32,
-            kernel_size=2,
-            padding='same',
-            activation='relu',
-            name='Conv-1',
-        )
-        self.conv2 = layers.Conv2D(
-            filters=64,
-            kernel_size=2,
-            padding='same',
-            activation='relu',
-            strides=(2, 2),
-            name='Conv-2',
-        )
-        self.flatten = layers.Flatten()
-        # self.flatten = layers.Flatten()
-        # self.dense1 = layers.Dense(256, activation='relu')
-        # self.dense2 = layers.Dense(128, activation='relu')
-
-        # Then a split with two dense outputs for (z_mean, z_log_var)
-        self.dense_mean = layers.Dense(
-            units=self.latent_dim,
-            # activation='linear'
-        )
-        self.dense_log_var = layers.Dense(
-            units=self.latent_dim,
-            # activation='linear'
-        )
-        # Sample (z) from (z_mean, z_log_var)
+        self.layer_list = [
+            layers.Conv2D(
+                input_shape=input_shape,
+                data_format='channels_last',
+                filters=32,
+                kernel_size=2,
+                padding='same',
+                activation='relu',
+                name='Conv-1',
+            ),
+            layers.Conv2D(
+                filters=64,
+                kernel_size=2,
+                padding='same',
+                activation='relu',
+                strides=(2, 2),
+                name='Conv-2',
+            ),
+            layers.Flatten(),
+            layers.Dense(256, activation='relu'),
+            layers.Dense(128, activation='relu'),
+        ]
+        self.dense_mean = layers.Dense(units=self.latent_dim)
+        self.dense_log_var = layers.Dense(units=self.latent_dim)
         self.sampling = Sampling(latent_dim=self.latent_dim)
 
         show_shapes(
             input_shape,
-            # [self.flatten, self.dense1, self.dense2, self.dense_mean],
-            [self.conv1, self.conv2, self.flatten, self.dense_mean],
+            self.layer_list + [self.dense_mean],
             name='Encoder'
         )
 
     def call(self, inputs):
-        out = self.flatten(self.conv2(self.conv1(inputs)))
-        # out = self.dense2(self.dense1(self.flatten(inputs)))
+        output = inputs
+        for layer in self.layer_list:
+            output = layer(output)
 
-        z_mean = self.dense_mean(out)
-        z_log_var = self.dense_log_var(out)
+        # Split with two dense outputs for (z_mean, z_log_var)
+        z_mean = self.dense_mean(output)
+        z_log_var = self.dense_log_var(output)
 
+        # Sample (z) from (z_mean, z_log_var)
         z = self.sampling((z_mean, z_log_var))
+
         return z_mean, z_log_var, z
 
 
@@ -126,49 +122,18 @@ class Decoder(tf.keras.Model):
     def build(self, input_shape):
         assert input_shape[1:] == (self.latent_dim), input_shape[1:]
 
-        # First, make a dense layer with the necessary amount of units
-        self.expand = layers.Dense(
-            units=self.col_dim,
-            activation='relu'
-        )
-        # Then reshape it into the image dimensions
-        self.reshape = layers.Reshape(target_shape=self.im_dim)
-
-        # Deconvolutional layers to do some decoding
-        # TODO: Not 100% sure about this DeConv architecture tbh
-        self.deconv1 = layers.Conv2DTranspose(
-            filters=64,
-            kernel_size=3,
-            strides=(1, 1),
-            padding='same',
-            activation='relu',
-            name='DeConv-1',
-        )
-
-        self.deconv2 = layers.Conv2DTranspose(
-            filters=1,
-            kernel_size=3,
-            strides=(1, 1),
-            padding='same',
-            name='DeConv-3',
-        )
-        # self.dense1 = layers.Dense(128, activation='relu')
-        # self.dense2 = layers.Dense(256, activation='relu')
-        # self.dense3 = layers.Dense(self.col_dim, activation='sigmoid')
-        # self.reshape = layers.Reshape(target_shape=self.im_dim)
-
-        show_shapes(
-            input_shape,
-            # [self.dense1, self.dense2, self.dense3, self.reshape],
-            [self.expand, self.reshape, self.deconv1, self.deconv2],
-            name='Decoder'
-        )
+        self.layer_list = [
+            layers.Dense(units=256, activation='relu'),
+            layers.Dense(units=self.col_dim, activation='sigmoid'),
+            layers.Reshape(target_shape=self.im_dim),
+        ]
+        show_shapes(input_shape, self.layer_list, name='Decoder')
 
     def call(self, inputs):
-        # return self.reshape(self.dense3(self.dense2(self.dense1(inputs))))
-        expanded = self.reshape(self.expand(inputs))
-        deconvolved = self.deconv2(self.deconv1(expanded))
-        return deconvolved
+        output = inputs
+        for layer in self.layer_list:
+            output = layer(output)
+        return output
 
 
 class VariationalAutoEncoder(tf.keras.Model):
@@ -237,12 +202,12 @@ def get_model(model_path, input_shape):
             latest_model = max(list_of_saved_models, key=path.getctime)
 
             # Load the latest checkpoint model
-            print('Loading the model from checkpoint', latest_model)
+            print('Loading the model from checkpoint', latest_model, '\n')
             vae.load_weights(latest_model)
 
     else:
         # Create a new model folder and write the experiment dict to file
-        print('Creating a new model at', model_path)
+        print('Creating a new model at', model_path, '\n')
         makedirs(model_path)
         with open(path.join(model_path, 'experiment.json'), 'w') as file:
             file.write(json.dumps(exp, indent=4))
