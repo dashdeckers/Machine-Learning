@@ -289,4 +289,8 @@ vae.fit(
 )
 
 
+plot_independent_grid(vae.decoder, 2, 1, (28, 28))
+plot_all_2D_manifolds(vae.decoder, 2, 1, (28, 28))
+
+
 show_reconstructed_digit(vae)

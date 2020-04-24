@@ -29,7 +29,7 @@ def plot_digit_classes_in_latent_space(encoder, im_shape, dataset):
     images, labels = list(test.take(1).as_numpy_iterator())[0]
 
     # Display a 2D plot of the digit classes in the latent space
-    z_test = encoder.predict(images, steps=1)
+    z_test = encoder(images, steps=1).numpy()
     plt.figure(figsize=(6, 6))
     plt.scatter(
         z_test[:, 0],
@@ -152,7 +152,7 @@ def plot_2D_manifold_of_latent_variables(
                                              n, show_all_dims)
 
     # Get predictions
-    x_decoded = decoder.predict(z_grid.reshape(width * height, latent_dim))
+    x_decoded = decoder(z_grid.reshape(width * height, latent_dim)).numpy()
 
     # If we only have one image channel, creating the image grid is easy
     if channels == 1:
