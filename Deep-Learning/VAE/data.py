@@ -13,7 +13,7 @@ def preprocessing(data, im_shape, labels=False):
     image = image / 255.0
     # Resize the image
     image = tf.image.resize(image, im_shape)
-    # image = tf.reshape(image, [-1])
+    image = tf.reshape(image, [-1])
 
     if labels:
         return image, data["label"]
@@ -71,18 +71,20 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
         crop_dogs(test_data)
 
     train = (
-        train_data.cache()
+        train_data
+        .map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        .cache()
         .shuffle(10 * batch_size)
         .repeat()
-        .map(preprocess)
         .batch(batch_size)
         .prefetch(5)
     )
 
     test = (
-        test_data.cache()
-        .repeat()
+        test_data
         .map(preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        .cache()
+        .repeat()
         .batch(batch_size)
         .prefetch(5)
     )
