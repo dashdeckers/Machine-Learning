@@ -4,10 +4,12 @@ import math
 from os import makedirs, path
 
 import matplotlib.pyplot as plt
-import scipy
-import sklearn
 import tensorflow as tf
 from data import get_data
+from plot import plot_all_2D_manifolds, plot_independent_grid
+from scipy.special import kl_div, rel_entr
+from scipy.stats import entropy
+from sklearn.metrics import mutual_info_score
 from tensorflow.keras import layers
 
 
@@ -137,11 +139,11 @@ class VariationalAutoEncoder(tf.keras.Model):
 
     @staticmethod
     def kl_divergence_lib(p, q):
-        return (scipy.rel_entr(p, q), scipy.kl_div(p, q))
+        return (rel_entr(p, q), kl_div(p, q), entropy(p, q))
 
     @staticmethod
     def mutual_information(p, q):
-        return sklearn.metrics.mutual_info_score(p, q)
+        return mutual_info_score(p, q)
 
     """
     Don't rely on them just yet.
@@ -163,6 +165,20 @@ class VariationalAutoEncoder(tf.keras.Model):
                 + 1
             )
         )
+
+        """
+        kl_loss = mutual_info + total_corr + dim_wise_kl
+
+        This guy says mutual information can be computed via the
+        scipy library function:
+        https://datascience.stackexchange.com/questions/9262/calculating-kl-divergence-in-python
+
+        Mutual information is function()
+
+        Total correlation is KL( q(z) || PROD q(z_j) )
+
+        Dimensionwise KL is SUM: KL( q(z_j) || p(z_j) )
+        """
 
         # Add negative log likelihood loss (likelihood of the data)
         # This regularization term is currently set as the L2 norm (MSE)
