@@ -180,7 +180,7 @@ def make_model(
         Conv2DTranspose(32, (3, 3), activation='relu'),
         UpSampling2D(size=(2, 2)),
         Conv2DTranspose(32, (3, 3), activation='relu'),
-        Reshape(target_shape=original_dim)
+        Reshape(target_shape=(32, 32))
     ])
 
     # Define the Encoder (Original Image --> Latent)
