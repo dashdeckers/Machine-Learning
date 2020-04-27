@@ -67,8 +67,12 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
         split="test",
     )
 
-    info.steps_per_epoch = info.splits["train"].num_examples / batch_size
-    info.validation_steps = info.splits["test"].num_examples / batch_size
+    info.steps_per_epoch = tf.math.ceil(
+        info.splits["train"].num_examples / batch_size
+    )
+    info.validation_steps = tf.math.ceil(
+        info.splits["test"].num_examples / batch_size
+    )
 
     if dataset == 'stanford_dogs':
         crop_dogs(train_data)
