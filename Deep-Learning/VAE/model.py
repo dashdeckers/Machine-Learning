@@ -168,39 +168,21 @@ def make_model(
     """Define the Variational Autoencoder model and return it."""
     # Define the Decoder (Latent --> Reconstructed Image)
     decoder = Sequential([
-        # Dense(int(interm_dim / 2), input_dim=latent_dim, activation='relu'),
-        # Dense(interm_dim, input_dim=int(interm_dim / 2), activation='relu'),
-        # Dense(original_dim, activation='sigmoid')
-        Dense(120, input_dim=latent_dim, activation='softmax'),
-        Dense(64, activation='relu'),
-        Flatten(),
-        UpSampling2D(size=(2, 2)),
-        Conv2DTranspose(64, (3, 3), activation='relu'),
-        UpSampling2D(size=(2, 2)),
-        Conv2DTranspose(32, (3, 3), activation='relu'),
-        UpSampling2D(size=(2, 2)),
-        Conv2DTranspose(32, (3, 3), activation='relu'),
-        Reshape(target_shape=(32, 32))
+        Dense(int(interm_dim / 2), input_dim=latent_dim, activation='relu'),
+        Dense(interm_dim, input_dim=int(interm_dim / 2), activation='relu'),
+        Dense(original_dim, activation='sigmoid')
     ])
 
     # Define the Encoder (Original Image --> Latent)
     # Input of the encoder
     x = Input(shape=(original_dim, ))
     # Hidden layer
-    h1 = Conv2D(32, (3, 3), activation='relu')(x)
-    h2 = MaxPooling2D(pool_size=(2, 2))(h1)
-    h3 = Conv2D(32, (3, 3), activation='relu')(h2)
-    h4 = MaxPooling2D(pool_size=(2, 2))(h3)
-    h5 = Conv2D(64, (3, 3), activation='relu')(h4)
-    h6 = MaxPooling2D(pool_size=(2, 2))(h5)
-    h7 = Flatten()(h6)
-    h8 = Dense(64, activation='relu')(h7)
-    h9 = Dropout(0.5)(h8)
-    h10 = Dense(120, activation='softmax')(h9)
+    h1 = Dense(interm_dim, activation='relu')(x)
+    h2 = Dense(int(interm_dim / 2), activation='relu')(h1)
 
     # Mean and log variance (output of the encoder)
-    z_mu = Dense(latent_dim)(h10)
-    z_log_var = Dense(latent_dim)(h10)
+    z_mu = Dense(latent_dim)(h2)
+    z_log_var = Dense(latent_dim)(h2)
 
     z_mu, z_log_var = KLDivergenceLayer(beta=beta)([z_mu, z_log_var])
     # Normalize the log variance to std dev
