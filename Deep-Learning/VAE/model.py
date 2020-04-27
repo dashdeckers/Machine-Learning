@@ -60,10 +60,12 @@ def get_experiment(project_name, resume=False):
     # Define the architecture
     exp['encoder_layers'] = [
         layers.Flatten(),
-        layers.Dense(256, activation='relu'),
+        layers.Dense(units=256, activation='relu'),
+        layers.Dense(units=128, activation='relu'),
     ]
 
     exp['decoder_layers'] = [
+        layers.Dense(units=128, activation='relu'),
         layers.Dense(units=256, activation='relu'),
         layers.Dense(units=exp['col_dim'], activation='relu'),
         layers.Reshape(target_shape=exp['input_shape'][1:]),
