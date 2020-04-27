@@ -102,7 +102,7 @@ def make_latent_grid(
         z_grid_1, z_grid_2 = np.dsplit(z_grid, 2)
         stack_list = list()
         for idx in range(latent_dim):
-            if idx == latent_indices[1]:
+            if idx == latent_indices[0]:
                 stack_list.append(z_grid_1)
             elif idx == latent_indices[1]:
                 stack_list.append(z_grid_2)
@@ -226,5 +226,5 @@ if __name__ == '__main__':
     decoder = tf.keras.models.load_model(os.path.join(model_path, 'decoder'))
 
     # Use CTRL+C to quit early
-    # plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape)
+    plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape)
     plot_independent_grid(decoder, latent_dim, channels, im_shape)
