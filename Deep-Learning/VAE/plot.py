@@ -1,15 +1,17 @@
-import os
+import argparse
 from itertools import combinations
 
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from data import get_data
+from model import get_model
 from scipy.stats import norm
-from VAE import mnist, stanford_dogs  # noqa
+
+tf.keras.backend.set_floatx('float64')
 
 
-def plot_digit_classes_in_latent_space(encoder, im_shape, dataset):
+def plot_digit_classes_in_latent_space(encoder, exp):
     """Plot digit classes in 2D latent space.
 
     Currently only works for MNIST and can be used to visualize disentanglement
@@ -22,14 +24,16 @@ def plot_digit_classes_in_latent_space(encoder, im_shape, dataset):
     # Get some labelled testing data
     _, test, _ = get_data(
         batch_size=500,
-        im_shape=im_shape,
+        im_shape=exp['im_shape'],
         labels=True,
-        dataset=dataset,
+        dataset=exp['dataset'],
     )
     images, labels = list(test.take(1).as_numpy_iterator())[0]
 
     # Display a 2D plot of the digit classes in the latent space
-    z_test = encoder(images, steps=1).numpy()
+    _, _, z_test = encoder(images)
+    z_test = z_test.numpy()
+
     plt.figure(figsize=(6, 6))
     plt.scatter(
         z_test[:, 0],
@@ -115,10 +119,8 @@ def make_latent_grid(
 
 def plot_2D_manifold_of_latent_variables(
             decoder,
-            latent_dim,
+            exp,
             latent_indices,
-            channels,
-            im_shape,
             show_all_dims=False
         ):
     """Plot a 2D manifold of latent variables.
@@ -138,6 +140,10 @@ def plot_2D_manifold_of_latent_variables(
 
     Then, we get an image prediction for each point in the grid and plot them.
     """
+    latent_dim = exp['latent_dim']
+    channels = exp['channels']
+    im_shape = exp['im_shape']
+
     assert im_shape[0] == im_shape[1], 'Only square images are supported'
     assert len(latent_indices) == 2, 'We can only plot a 2D manifold'
     assert latent_indices[0] != latent_indices[1], 'Plot both z1 and z2 please'
@@ -188,43 +194,30 @@ def plot_2D_manifold_of_latent_variables(
     plt.show()
 
 
-def plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape):
+def plot_all_2D_manifolds(decoder, exp):
     """Plot all possible combinations of latent variables to vary."""
-    for latent_indices in combinations(range(latent_dim), 2):
-        plot_2D_manifold_of_latent_variables(
-            decoder,
-            latent_dim,
-            latent_indices,
-            channels,
-            im_shape
-        )
+    for latent_indices in combinations(range(exp['latent_dim']), 2):
+        plot_2D_manifold_of_latent_variables(decoder, exp, latent_indices)
 
 
-def plot_independent_grid(decoder, latent_dim, channels, im_shape):
-    plot_2D_manifold_of_latent_variables(
-        decoder,
-        latent_dim,
-        (0, 1),
-        channels,
-        im_shape,
-        show_all_dims=True
-    )
+def plot_independent_grid(decoder, exp):
+    plot_2D_manifold_of_latent_variables(decoder, exp, (0, 1), True)
 
 
 if __name__ == '__main__':
-    # Load experiment variables
-    experiment = mnist
+    parser = argparse.ArgumentParser(description='VAE Plotter')
+    parser.add_argument('name', type=str)
+    parser.add_argument('--checkpoint', default='newest')
+    args = parser.parse_args()
 
-    model_path = experiment['model_path']
-    im_shape = experiment['im_shape']
-    channels = experiment['channels']
-    latent_dim = experiment['latent_dim']
-    dataset = experiment['dataset']
-
-    # Load the saved model
-    encoder = tf.keras.models.load_model(os.path.join(model_path, 'encoder'))
-    decoder = tf.keras.models.load_model(os.path.join(model_path, 'decoder'))
+    # Load the model (exp must have the same architecture as the saved model)
+    vae, exp = get_model(
+        project_name=args.name,
+        resume=True,
+        checkpoint=args.checkpoint,
+    )
 
     # Use CTRL+C to quit early
-    # plot_all_2D_manifolds(decoder, latent_dim, channels, im_shape)
-    plot_independent_grid(decoder, latent_dim, channels, im_shape)
+    plot_digit_classes_in_latent_space(vae.encoder, exp)
+    plot_independent_grid(vae.decoder, exp)
+    plot_all_2D_manifolds(vae.decoder, exp)

@@ -1,9 +1,11 @@
-"""Serves to load the tensorflow dataset and prepare it."""
+"""Load and preprocess the tensorflow datasets and prepare it."""
 from functools import partial
 
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from tqdm import tqdm
+
+tf.keras.backend.set_floatx('float64')
 
 
 def preprocessing(data, im_shape, labels=False):
@@ -13,7 +15,6 @@ def preprocessing(data, im_shape, labels=False):
     image = image / 255.0
     # Resize the image
     image = tf.image.resize(image, im_shape)
-    image = tf.reshape(image, [-1])
 
     if labels:
         return image, data["label"]
@@ -65,6 +66,9 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
         name=dataset,
         split="test",
     )
+
+    info.steps_per_epoch = info.splits["train"].num_examples / batch_size
+    info.validation_steps = info.splits["test"].num_examples / batch_size
 
     if dataset == 'stanford_dogs':
         crop_dogs(train_data)

@@ -1,87 +1,127 @@
-"""Define the VAE model, saving, loading, layers and custom callbacks."""
+"""Define the VAE model, project/experiment management, and GPU config."""
+import glob
+import json
+import math
 import os
-import sys
-from datetime import datetime
 
+import numpy as np
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import backend as K
-from tensorflow.keras.callbacks import Callback
-from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
-from tensorflow.keras.models import Model, Sequential
-from tensorflow.python.framework.errors_impl import NotFoundError
+from scipy.special import kl_div, rel_entr
+from scipy.stats import entropy
+from sklearn.metrics import mutual_info_score
+from tensorflow.keras import layers
+
+tf.keras.backend.set_floatx('float64')
 
 
-def nll(y_true, y_pred):
-    """Negative log likelihood (Bernoulli)."""
-    # keras.losses.binary_crossentropy gives the mean
-    # over the last axis. we require the sum
-    return K.sum(K.binary_crossentropy(y_true, y_pred), axis=-1)
+def get_experiment(project_name, resume=False):
+    """Define the experiment here!.
+
+    Everything about the VAE that can be changed is defined here. You can
+    play with all the parameters you want from the exp dictionary.
+    """
+    if resume:
+        funcs = {
+            'dense': layers.Dense,
+            'flatten': layers.Flatten,
+            'reshape': layers.Reshape,
+            'optimizer': tf.keras.optimizers.Adam,
+        }
+        # Get experiment from file
+        with open(os.path.join(project_name, 'experiment.json')) as file:
+            exp = json.load(file)
+
+        # Convert layer configs into actual layers
+        exp['optimizer'] = funcs['optimizer'].from_config(exp['optimizer'])
+        for enc_dec in ['encoder_layers', 'decoder_layers']:
+            for idx, config in enumerate(exp[enc_dec]):
+                for fname in funcs.keys():
+                    if config['name'].startswith(fname):
+                        exp[enc_dec][idx] = funcs[fname].from_config(config)
+
+        return exp
+
+    # Define the experiment
+    exp = {
+        'project_name': project_name,
+        'dataset': 'mnist',  # 'stanford_dogs'
+        'input_shape': (1, 28, 28, 1),  # (1, 32, 32, 3)
+        'batch_size': 64,
+        'epochs': 10,
+
+        'latent_dim': 2,
+        'beta': 1.0,
+        'optimizer': tf.keras.optimizers.Adam(),  # rmsprop
+    }
+    exp['im_shape'] = exp['input_shape'][1:3]
+    exp['channels'] = exp['input_shape'][3]
+    exp['col_dim'] = int(np.prod(exp['input_shape'][1:]))
+
+    # Define the architecture
+    exp['encoder_layers'] = [
+        layers.Flatten(),
+        layers.Dense(256, activation='relu'),
+    ]
+
+    exp['decoder_layers'] = [
+        layers.Dense(units=256, activation='relu'),
+        layers.Dense(units=exp['col_dim'], activation='relu'),
+        layers.Reshape(target_shape=exp['input_shape'][1:]),
+    ]
+    return exp
 
 
-class KLDivergenceLayer(Layer):
-    """Identity transform layer that adds KL divergence to the final loss."""
+def create_project_safely(name, exp):
+    """Create a project directory and write the experiment file to it.
 
-    def __init__(self, beta, *args, **kwargs):
-        self.is_placeholder = True
-        self.beta = beta
-        super(KLDivergenceLayer, self).__init__(*args, **kwargs)
+    Does not do anything if the directory already exists.
+    """
+    if not os.path.exists(name):
+        print('\nCreating a new model at', name, '\n')
+        os.makedirs(name)
 
-    def call(self, inputs):
-
-        mu, log_var = inputs
-
-        kl_batch = - .5 * K.sum(1 + log_var -
-                                K.square(mu) -
-                                K.exp(log_var), axis=-1)
-
-        # Multiply KLD component with Beta factor
-        kl_batch *= self.beta
-
-        self.add_loss(K.mean(kl_batch), inputs=inputs)
-
-        return inputs
-
-
-def getTensorboardCallback(path):
-    """Create a Tensorboard at model_path/logs."""
-    tensorboard_callback = keras.callbacks.TensorBoard(
-        log_dir=os.path.join(
-            path, "logs",
-            datetime.now().strftime("%Y%m%d-%H%M%S")
-        )
-    )
-    return tensorboard_callback
-
-
-class CustomCallback(Callback):
-    """Descends from Callback."""
-
-    def __init__(self, path, checkpoint, encoder, decoder):
-        self.model_path = path
-        self.checkpoint = checkpoint
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def on_epoch_end(self, epoch, logs=None):
-        # Checkpoint - Save every X epochs
-        if self.checkpoint == 0:
-            return
-
-        if epoch % self.checkpoint == 0:
-            print("\nSaving the model at epoch: ", epoch+1)
-            save_model(
-                vae=self.model,
-                encoder=self.encoder,
-                decoder=self.decoder,
-                model_path=self.model_path,
+        with open(os.path.join(name, 'experiment.json'), 'w') as file:
+            file.write(json.dumps(
+                exp,
+                indent=4,
+                default=lambda layer: layer.get_config())
             )
 
-    # Catch if no callbacks are enabled
-    lambda *_, **__: None
+
+def get_model(project_name, resume, checkpoint='newest'):
+    """Create and retrieve a VAE model, and load saved weights if needed."""
+    exp = get_experiment(project_name, resume)
+    create_project_safely(project_name, exp)
+
+    vae = VariationalAutoEncoder(exp)
+    vae.compile(optimizer=exp['optimizer'])
+
+    if not resume:
+        return vae, exp
+
+    list_of_saved_models = glob.glob(os.path.join(project_name, '*.h5'))
+    if not list_of_saved_models:
+        print(f'No saved checkpoints found at {project_name}')
+        return vae, exp
+
+    # Create the weights if the model was not already initialized
+    vae.predict(tf.zeros(vae.exp['input_shape'], dtype=tf.float64))
+
+    # Load the latest checkpoint model
+    if checkpoint == 'newest':
+        latest_model = max(list_of_saved_models, key=os.path.getctime)
+        print('Loading the model from checkpoint', latest_model, '\n')
+        vae.load_weights(latest_model)
+
+    else:
+        print('Loading the model from checkpoint', checkpoint, '\n')
+        vae.load_weights(os.path.join(project_name, checkpoint))
+
+    return vae, exp
 
 
 def gpu_configuration():
+    """If possible, set the model to run on the GPU."""
     physical_devices = tf.config.list_physical_devices('GPU')
     try:
         # Dynamically allocate GPU memory use
@@ -92,113 +132,175 @@ def gpu_configuration():
         pass
 
 
-def load_model(
-            original_dim,
-            interm_dim,
-            latent_dim,
-            epochs,
-            epsilon_std,
-            beta,
-            model_path,
-            train
-        ):
-    try:
-        # If there is already a model at the given folder, try resuming
-        assert os.path.isdir(model_path), f'No directory at {model_path}'
+def show_shapes(input_shape, layer_list, name):
+    """Show the tensor shapes that flow through the model.
 
-        # Load the en/decoder, create the VAE and load its weights
-        encoder = tf.keras.models.load_model(
-            os.path.join(model_path, 'encoder')
+    Basic visualization of tensor shapes to track architecture and flow.
+    Layers must be successive starting from input_shape or it won't work,
+    and the Sampling layer does not work either, use dense_mean instead.
+    """
+    shapes = [input_shape]
+    for layer in layer_list:
+        shapes.append(layer.compute_output_shape(shapes[-1]))
+
+    print(f'\n{name}:', ' --> '.join([str(s[1:]) for s in shapes]), '\n')
+
+
+class Sampling(layers.Layer):
+    """Uses (z_mean, z_log_var) to sample z using the reparameterization trick.
+
+    For z in range(laten_dim):
+        sample a point from N(z_mean, z_log_var)
+    """
+
+    def __init__(self, latent_dim, **kwargs):
+        super(Sampling, self).__init__(**kwargs)
+        self.latent_dim = latent_dim
+
+    def call(self, inputs):
+        z_mean, z_log_var = inputs
+
+        epsilon = tf.keras.backend.random_normal(shape=tf.shape(z_mean))
+        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+
+
+class Encoder(tf.keras.Model):
+    """Maps an image to: (z_mean, z_log_var, z)."""
+
+    def __init__(self, exp, name='encoder', **kwargs):
+        super(Encoder, self).__init__(name=name, **kwargs)
+        self.latent_dim = exp['latent_dim']
+        self.layer_list = exp['encoder_layers']
+        self.exp = exp
+
+    def build(self, input_shape):
+        assert input_shape[1:] == self.exp['input_shape'][1:]
+
+        self.flatten = layers.Flatten()
+        self.dense_mean = layers.Dense(units=self.latent_dim)
+        self.dense_log_var = layers.Dense(units=self.latent_dim)
+        self.sampling = Sampling(latent_dim=self.latent_dim)
+
+        show_shapes(
+            input_shape,
+            self.layer_list + [self.flatten, self.dense_mean],
+            name='Encoder'
         )
-        decoder = tf.keras.models.load_model(
-            os.path.join(model_path, 'decoder')
+
+    def call(self, inputs):
+        output = inputs
+        for layer in self.layer_list:
+            output = layer(output)
+        output = self.flatten(output)
+
+        # Split to get (mean, variance) for each z
+        z_mean = self.dense_mean(output)
+        z_log_var = self.dense_log_var(output)
+
+        # Sample from (mean, variance) to get z
+        z = self.sampling((z_mean, z_log_var))
+        return z_mean, z_log_var, z
+
+
+class Decoder(tf.keras.Model):
+    """Converts z back into an image."""
+
+    def __init__(self, exp, name='decoder', **kwargs):
+        super(Decoder, self).__init__(name=name, **kwargs)
+        self.latent_dim = exp['latent_dim']
+        self.layer_list = exp['decoder_layers']
+        self.exp = exp
+
+    def build(self, input_shape):
+        assert input_shape[1:] == self.latent_dim, input_shape[1:]
+        show_shapes(input_shape, self.layer_list, name='Decoder')
+
+    def call(self, inputs):
+        output = inputs
+        for layer in self.layer_list:
+            output = layer(output)
+        assert output.shape[1:] == self.exp['input_shape'][1:]
+        return output
+
+
+class VariationalAutoEncoder(tf.keras.Model):
+    """Combines the encoder and decoder into an end-to-end model."""
+
+    def __init__(self, exp, name='VAE', **kwargs):
+        super(VariationalAutoEncoder, self).__init__(name=name, **kwargs)
+        self.im_shape = exp['im_shape']
+        self.beta = exp['beta']
+        self.exp = exp
+
+    def build(self, input_shape):
+        assert len(input_shape) == 4, f'(batch, w, h, c): {input_shape}'
+        self.encoder = Encoder(exp=self.exp)
+        self.decoder = Decoder(exp=self.exp)
+
+    """
+    Just testing these methods.
+    """
+    @staticmethod
+    def kl_divergence(p, q):
+        assert len(p) == len(q), 'Must have the same length'
+        assert sum(p) == sum(q) == 1, 'Must sum to 1 to be a probability dist.'
+        return sum(p[i] * math.log2(p[i]/q[i]) for i in range(len(p)))
+
+    @staticmethod
+    def kl_divergence_lib(p, q):
+        return (rel_entr(p, q), kl_div(p, q), entropy(p, q))
+
+    @staticmethod
+    def mutual_information(p, q):
+        return mutual_info_score(p, q)
+
+    """
+    Don't rely on them just yet.
+    """
+
+    def call(self, inputs):
+        z_mean, z_log_var, z = self.encoder(inputs)
+        reconstructed = self.decoder(z)
+
+        # Add KL divergence loss
+        # TODO: This calculation needs to be dissected into the 3 parts from
+        # the ELBO TC-Decomposition (See the VAE paper)
+        kl_loss = (
+            - 0.5
+            * tf.reduce_mean(
+                z_log_var
+                - tf.square(z_mean)
+                - tf.exp(z_log_var)
+                + 1
+            )
         )
-        vae, _, _ = make_model(
-            original_dim=original_dim,
-            interm_dim=interm_dim,
-            latent_dim=latent_dim,
-            epochs=epochs,
-            epsilon_std=epsilon_std,
-            beta=beta,
+
+        """
+        kl_loss = mutual_info + total_corr + dim_wise_kl
+
+        This guy says mutual information can be computed via the
+        scipy library function:
+        https://datascience.stackexchange.com/questions/9262/calculating-kl-divergence-in-python
+
+        Mutual information is the function
+
+        Total correlation is KL( q(z) || PROD q(z_j) )
+
+        Dimensionwise KL is SUM: KL( q(z_j) || p(z_j) )
+        """
+
+        # Add negative log likelihood loss (likelihood of the data)
+        # This regularization term is currently set as the L2 norm (MSE)
+        # but it can also be categorical cross entropy if the sigmoid
+        # is used in the output layer so that all values are in [0, 1]
+
+        rec_loss = tf.reduce_sum(
+            tf.square(inputs[0, :, :, :] - reconstructed[0, :, :, :])
         )
-        vae.compile(optimizer='rmsprop', loss=nll)
 
-        # Load the state of the old model
-        vae.load_weights(os.path.join(model_path, 'vae', ""))
-        print(f"\nResuming from loaded model at {model_path}\n")
+        self.add_loss(tf.reduce_mean(rec_loss + kl_loss), inputs=inputs)
 
-    except (AssertionError, NotFoundError) as e:
-        print(e)
-        print(f"\nCreating a new model at {model_path}\n")
-        return None, None, None
+        # breakpoint()
 
-    except (ImportError, IOError, ValueError) as e:
-        print(e)
-        print(f"\nTried resuming from {model_path} but something went wrong\n")
-        sys.exit()
-
-    return vae, encoder, decoder
-
-
-def save_model(
-            vae,
-            encoder,
-            decoder,
-            model_path
-        ):
-    # Reset metrics before saving so that loaded model has same state,
-    # since metric states are not preserved by Model.save_weights
-    vae.reset_metrics()
-    # Save the model
-    vae.save_weights(os.path.join(model_path, 'vae', ""), save_format='tf')
-    encoder.save(os.path.join(model_path, 'encoder'))
-    decoder.save(os.path.join(model_path, 'decoder'))
-
-
-def make_model(
-            original_dim,
-            interm_dim,
-            latent_dim,
-            epochs,
-            epsilon_std,
-            beta
-        ):
-    """Define the Variational Autoencoder model and return it."""
-    # Define the Decoder (Latent --> Reconstructed Image)
-    decoder = Sequential([
-        Dense(int(interm_dim / 2), input_dim=latent_dim, activation='relu'),
-        Dense(interm_dim, input_dim=int(interm_dim / 2), activation='relu'),
-        Dense(original_dim, activation='sigmoid')
-    ])
-
-    # Define the Encoder (Original Image --> Latent)
-    # Input of the encoder
-    x = Input(shape=(original_dim, ))
-    # Hidden layer
-    h1 = Dense(interm_dim, activation='relu')(x)
-    h2 = Dense(int(interm_dim / 2), activation='relu')(h1)
-    # Mean and log variance (output of the encoder)
-    z_mu = Dense(latent_dim)(h2)
-    z_log_var = Dense(latent_dim)(h2)
-
-    z_mu, z_log_var = KLDivergenceLayer(beta=beta)([z_mu, z_log_var])
-    # Normalize the log variance to std dev
-    z_sigma = Lambda(lambda t: K.exp(.5*t))(z_log_var)
-
-    eps = K.random_normal(
-        stddev=epsilon_std,
-        shape=(K.shape(x)[0], latent_dim),
-        seed=42
-    )
-    z_eps = Multiply()([z_sigma, eps])
-    z = Add()([z_mu, z_eps])
-
-    x_pred = decoder(z)
-
-    # Combine the Encoder and Decoder to define the VAE
-    vae = Model(x, x_pred)
-    vae.compile(optimizer='rmsprop', loss=nll)
-
-    encoder = Model(x, z_mu)
-
-    return vae, encoder, decoder
+        # TODO: Save reconstructed image everytime to see the quality increase?
+        return reconstructed

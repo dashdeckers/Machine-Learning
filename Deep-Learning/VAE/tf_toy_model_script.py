@@ -1,16 +1,27 @@
-import glob
-import json
 import math
-from os import makedirs, path
 
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from data import get_data
-from plot import plot_all_2D_manifolds, plot_independent_grid
 from scipy.special import kl_div, rel_entr
 from scipy.stats import entropy
 from sklearn.metrics import mutual_info_score
 from tensorflow.keras import layers
+
+
+def show_reconstructed_image(model, test, im_idx=0):
+    """Show a test image before and after reconstruction.
+
+    This basic visualization just shows the reconstruction quality
+    which does not have to be great for it to be a good model.
+    """
+    test_batch = list(test.take(1).as_numpy_iterator())[0][0]
+    test_input = tf.reshape(test_batch[im_idx], model.exp['input_shape'])
+
+    before = tf.reshape(test_input, model.im_shape).numpy()
+    after = tf.reshape(model(test_input), model.im_shape).numpy()
+
+    plt.imshow(before); plt.show()  # noqa
+    plt.imshow(after); plt.show()  # noqa
 
 
 def show_shapes(input_shape, layer_list, name):
@@ -41,8 +52,8 @@ class Sampling(layers.Layer):
     def call(self, inputs):
         z_mean, z_log_var = inputs
 
-        assert z_mean.shape[1:] == z_log_var.shape[1:], z_log_var.shape
-        assert z_mean.shape[1:] == self.latent_dim, z_mean.shape
+        # assert z_mean.shape[1:] == z_log_var.shape[1:], z_log_var.shape
+        # assert z_mean.shape[1:] == self.latent_dim, z_mean.shape
 
         epsilon = tf.keras.backend.random_normal(shape=tf.shape(z_mean))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
@@ -54,23 +65,20 @@ class Encoder(tf.keras.Model):
     def __init__(self, exp, name='encoder', **kwargs):
         super(Encoder, self).__init__(name=name, **kwargs)
         self.latent_dim = exp['latent_dim']
+        self.layer_list = exp['encoder_layers']
+        self.exp = exp
 
     def build(self, input_shape):
-        # First layers to capture image data
-        self.layer_list = [
-            layers.Flatten(),
-            layers.Dense(256, activation='relu'),
-            layers.Dense(128, activation='relu'),
-        ]
-        # Then split with two dense outputs for (z_mean, z_log_var)
+        assert input_shape[1:] == self.exp['input_shape'][1:]
+
+        self.flatten = layers.Flatten()
         self.dense_mean = layers.Dense(units=self.latent_dim)
         self.dense_log_var = layers.Dense(units=self.latent_dim)
-        # Sample (z) from (z_mean, z_log_var)
         self.sampling = Sampling(latent_dim=self.latent_dim)
 
         show_shapes(
             input_shape,
-            self.layer_list + [self.dense_mean],
+            self.layer_list + [self.flatten, self.dense_mean],
             name='Encoder'
         )
 
@@ -78,10 +86,13 @@ class Encoder(tf.keras.Model):
         output = inputs
         for layer in self.layer_list:
             output = layer(output)
+        output = self.flatten(output)
 
+        # Split to get (mean, variance) for each z
         z_mean = self.dense_mean(output)
         z_log_var = self.dense_log_var(output)
 
+        # Sample from (mean, variance) to get z
         z = self.sampling((z_mean, z_log_var))
         return z_mean, z_log_var, z
 
@@ -92,23 +103,18 @@ class Decoder(tf.keras.Model):
     def __init__(self, exp, name='decoder', **kwargs):
         super(Decoder, self).__init__(name=name, **kwargs)
         self.latent_dim = exp['latent_dim']
-        self.im_dim = exp['im_shape'] + (exp['channels'], )
-        self.col_dim = self.im_dim[0] * self.im_dim[1] * self.im_dim[2]
+        self.layer_list = exp['decoder_layers']
+        self.exp = exp
 
     def build(self, input_shape):
-        assert input_shape[1:] == (self.latent_dim), input_shape[1:]
-
-        self.layer_list = [
-            layers.Dense(units=256, activation='relu'),
-            layers.Dense(units=self.col_dim, activation='sigmoid'),
-            layers.Reshape(target_shape=self.im_dim),
-        ]
+        assert input_shape[1:] == self.latent_dim, input_shape[1:]
         show_shapes(input_shape, self.layer_list, name='Decoder')
 
     def call(self, inputs):
         output = inputs
         for layer in self.layer_list:
             output = layer(output)
+        assert output.shape[1:] == self.exp['input_shape'][1:]
         return output
 
 
@@ -117,10 +123,8 @@ class VariationalAutoEncoder(tf.keras.Model):
 
     def __init__(self, exp, name='VAE', **kwargs):
         super(VariationalAutoEncoder, self).__init__(name=name, **kwargs)
-        self.latent_dim = exp['latent_dim']
-        self.im_dim = exp['im_shape'] + (exp['channels'], )
+        self.im_shape = exp['im_shape']
         self.beta = exp['beta']
-        self.model_path = exp['model_path']
         self.exp = exp
 
     def build(self, input_shape):
@@ -194,119 +198,3 @@ class VariationalAutoEncoder(tf.keras.Model):
 
         # TODO: Save reconstructed image everytime to see the quality increase?
         return reconstructed
-
-
-def get_model(exp):
-    """Load a model from checkpoint or create a new one.
-
-    Manages loading from most recent checkpoint, creating the
-    directories, returning the model.
-    """
-    model_path = exp['model_path']
-    input_shape = (1,) + exp['im_shape'] + (exp['channels'], )
-
-    vae = VariationalAutoEncoder(exp)
-    vae.compile(optimizer=tf.keras.optimizers.Adam())
-    vae(tf.zeros(input_shape))  # create the weights
-
-    if path.exists(model_path):
-        # Grab the newest .h5 model checkpoint file, if it exists
-        list_of_saved_models = glob.glob(path.join(model_path, '*.h5'))
-
-        if list_of_saved_models:
-            latest_model = max(list_of_saved_models, key=path.getctime)
-
-            # Load the latest checkpoint model
-            print('Loading the model from checkpoint', latest_model, '\n')
-            vae.load_weights(latest_model)
-
-    else:
-        # Create a new model folder and write the experiment dict to file
-        print('Creating a new model at', model_path, '\n')
-        makedirs(model_path)
-        with open(path.join(model_path, 'experiment.json'), 'w') as file:
-            file.write(json.dumps(exp, indent=4))
-
-    return vae
-
-
-def show_reconstructed_digit(vae, index=0):
-    """Show a test image before and after reconstruction."""
-    test_batch = list(test.take(1).as_numpy_iterator())[0][0]
-    test_input = tf.reshape(test_batch[index], (1, 28, 28, 1))
-
-    before = tf.reshape(test_input, (28, 28)).numpy()
-    after = tf.reshape(vae(test_input), (28, 28)).numpy()
-
-    plt.imshow(before)
-    plt.show()
-    plt.imshow(after)
-    plt.show()
-
-
-# Define the experiment
-# exp = {
-#     'dataset': 'mnist',
-#     'im_shape': (28, 28),
-#     'channels': 1,
-#     'latent_dim': 2,
-#     'batch_size': 64,
-#     'epochs': 10,
-#     'beta': 1.0,
-#     'model_path': 'new_mnist',
-#     'checkpoint_format': '{epoch:02d}-{val_loss:.2f}.h5',
-# }
-
-exp = {
-    'dataset': 'stanford_dogs',  # 'mnist',
-    'im_shape': (32, 32),  # (28, 28),
-    'channels': 3,
-    'latent_dim': 64,
-    'batch_size': 16,
-    'epochs': 10,
-    'beta': 1.0,
-    'model_path': 'new_dogs',
-    'checkpoint_format': '{epoch:02d}-{val_loss:.2f}.h5',
-}
-
-
-# Load and preprocess the data
-train, test, info = get_data(
-    batch_size=exp['batch_size'],
-    im_shape=exp['im_shape'],
-    dataset=exp['dataset'],
-)
-
-
-# Create, train and evaluate the model
-vae = get_model(exp)
-vae.fit(
-    train,
-    epochs=exp['epochs'],
-    steps_per_epoch=math.ceil(
-        info.splits["train"].num_examples / exp['batch_size']),
-    validation_data=test,
-    validation_steps=math.ceil(
-        info.splits["test"].num_examples / exp['batch_size']),
-    callbacks=[
-        # Log validation losses
-        tf.keras.callbacks.CSVLogger(
-            filename=path.join(exp['model_path'], 'losses.csv'),
-            append=True
-        ),
-        # Create model checkpoints (Skip during exploratory testing)
-        # tf.keras.callbacks.ModelCheckpoint(
-        #     filepath=path.join(exp['model_path'], exp['checkpoint_format']),
-        #     monitor='val_loss',
-        #     save_freq='epoch',
-        #     verbose=1,
-        # ),
-    ],
-)
-
-
-plot_independent_grid(vae.decoder, 2, 1, (28, 28))
-plot_all_2D_manifolds(vae.decoder, 2, 1, (28, 28))
-
-
-show_reconstructed_digit(vae)

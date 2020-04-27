@@ -1,129 +1,59 @@
 """Main file."""
-import json
-import math
+import argparse
 import os
 
+import tensorflow as tf
 from data import get_data
-from model import (CustomCallback, getTensorboardCallback, gpu_configuration,
-                   load_model, make_model, save_model)
+from model import get_model, gpu_configuration
 
-# Define experiments
-stanford_dogs = {
-    'dataset': 'stanford_dogs',
-    'im_shape': (32, 32),
-    'channels': 3,
-    'interm_dim': 512,
-    'latent_dim': 30,
-    'batch_size': 512,
-    'epochs': 3600,
-    'epsilon_std': 1.0,
-    'beta': 1.0,
-    'model_path': 'models_dogs',
-    'checkpoint': 100,
-}
+tf.keras.backend.set_floatx('float64')
+checkpoint_format = 'e{epoch:02d}-l{val_loss:.2f}.h5'
 
-mnist = {
-    'dataset': 'mnist',
-    'im_shape': (28, 28),
-    'channels': 1,
-    'interm_dim': 256,
-    'latent_dim': 2,
-    'batch_size': 512,
-    'epochs': 10,
-    'epsilon_std': 1.0,
-    'beta': 1.0,
-    'model_path': 'models_mnist',
-    'checkpoint': 0,
-}
+# Parse arguments. Require the user to provide a project/run name
+parser = argparse.ArgumentParser(description='VAE')
+parser.add_argument('--resume', default=False, action='store_true')
+parser.add_argument('--checkpoint', default='newest')
+parser.add_argument('name', type=str)
+args = parser.parse_args()
 
+# Setup GPU options
+gpu_configuration()
 
-def main(
-            dataset,
-            im_shape,
-            channels,
-            interm_dim,
-            latent_dim,
-            batch_size,
-            epochs,
-            epsilon_std,
-            beta,
-            model_path,
-            checkpoint,
-        ):
-    """Run the experiment."""
-    original_dim = im_shape[0] * im_shape[1] * channels
+# Create the model and maybe resume from checkpoint
+vae, exp = get_model(
+    project_name=args.name,
+    resume=args.resume,
+    checkpoint=args.checkpoint,
+)
 
-    # Get the data
-    train, test, info = get_data(
-        batch_size=batch_size,
-        im_shape=im_shape,
-        dataset=dataset,
-    )
+# Load and preprocess the data
+train, test, info = get_data(
+    batch_size=exp['batch_size'],
+    im_shape=exp['im_shape'],
+    dataset=exp['dataset'],
+)
 
-    # Define more globals
-    steps_per_epoch = math.ceil(info.splits["train"].num_examples / batch_size)
-    val_steps = math.ceil(info.splits["test"].num_examples / batch_size)
-
-    # Setup GPU options
-    gpu_configuration()
-
-    # Load the model
-    vae, encoder, decoder, = load_model(
-        original_dim=original_dim,
-        interm_dim=interm_dim,
-        latent_dim=latent_dim,
-        epochs=epochs,
-        epsilon_std=epsilon_std,
-        beta=beta,
-        model_path=model_path,
-        train=train,
-    )
-
-    # Or create the model
-    if any([item is None for item in [vae, encoder, decoder]]):
-        print('*' * 35)
-        vae, encoder, decoder = make_model(
-            original_dim=original_dim,
-            interm_dim=interm_dim,
-            latent_dim=latent_dim,
-            epochs=epochs,
-            epsilon_std=epsilon_std,
-            beta=beta,
-        )
-
-    # Train the model
-    vae.fit(
-        train,
-        epochs=epochs,
-        steps_per_epoch=steps_per_epoch,
-        validation_data=test,
-        validation_steps=val_steps,
-        callbacks=[
-            CustomCallback(
-                path=model_path,
-                checkpoint=checkpoint,
-                encoder=encoder,
-                decoder=decoder,
-            ),
-            getTensorboardCallback(
-                path=model_path,
-            )
-        ],
-    )
-
-    # Save the model
-    save_model(
-        vae=vae,
-        encoder=encoder,
-        decoder=decoder,
-        model_path=model_path,
-    )
-
-    # Save the experiment details
-    with open(os.path.join(model_path, 'experiment.json'), 'w') as outfile:
-        json.dump(globals()[dataset], outfile)
-
-
-if __name__ == '__main__':
-    # main(**stanford_dogs)
-    main(**mnist)
+# Train and evaluate the model
+vae.fit(
+    train,
+    epochs=exp['epochs'],
+    steps_per_epoch=info.steps_per_epoch,
+    validation_data=test,
+    validation_steps=info.validation_steps,
+    callbacks=[
+        # Log validation losses
+        tf.keras.callbacks.CSVLogger(
+            filename=os.path.join(args.name, 'losses.csv'),
+            append=True
+        ),
+        # Create model checkpoints
+        tf.keras.callbacks.ModelCheckpoint(
+            filepath=os.path.join(args.name, checkpoint_format),
+            save_weights_only=True,
+            save_best_only=False,
+            monitor='val_loss',
+            save_freq='epoch',
+            verbose=1,
+        ),
+    ],
+)
