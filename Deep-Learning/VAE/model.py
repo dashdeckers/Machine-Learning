@@ -168,7 +168,6 @@ def make_model(
     """Define the Variational Autoencoder model and return it."""
     # Define the Decoder (Latent --> Reconstructed Image)
     decoder = Sequential([
-        Dense(int(interm_dim / 2), input_dim=latent_dim, activation='relu'),
         Dense(interm_dim, input_dim=int(interm_dim / 2), activation='relu'),
         Dense(original_dim, activation='sigmoid')
     ])
@@ -177,12 +176,11 @@ def make_model(
     # Input of the encoder
     x = Input(shape=(original_dim, ))
     # Hidden layer
-    h1 = Dense(interm_dim, activation='relu')(x)
-    h2 = Dense(int(interm_dim / 2), activation='relu')(h1)
+    h = Dense(interm_dim, activation='relu')(x)
 
     # Mean and log variance (output of the encoder)
-    z_mu = Dense(latent_dim)(h2)
-    z_log_var = Dense(latent_dim)(h2)
+    z_mu = Dense(latent_dim)(h)
+    z_log_var = Dense(latent_dim)(h)
 
     z_mu, z_log_var = KLDivergenceLayer(beta=beta)([z_mu, z_log_var])
     # Normalize the log variance to std dev
