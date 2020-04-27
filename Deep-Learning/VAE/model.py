@@ -168,7 +168,7 @@ def make_model(
     """Define the Variational Autoencoder model and return it."""
     # Define the Decoder (Latent --> Reconstructed Image)
     decoder = Sequential([
-        Dense(interm_dim, input_dim=int(interm_dim / 2), activation='relu'),
+        Dense(interm_dim, input_dim=latent_dim, activation='relu'),
         Dense(original_dim, activation='sigmoid')
     ])
 
