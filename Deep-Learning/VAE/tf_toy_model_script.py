@@ -153,7 +153,7 @@ class VariationalAutoEncoder(tf.keras.Model):
         z_mean, z_log_var, z = self.encoder(inputs)
         reconstructed = self.decoder(z)
 
-        # Add KL divergence loss
+        # Add KL divergence lossKLDi
         # TODO: This calculation needs to be dissected into the 3 parts from
         # the ELBO TC-Decomposition (See the VAE paper)
         kl_loss = (

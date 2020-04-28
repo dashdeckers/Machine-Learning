@@ -7,9 +7,10 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import Callback
-from tensorflow.keras.layers import Add, Dense, Input, Lambda, Layer, Multiply
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dropout
-from tensorflow.keras.layers import UpSampling2D, Conv2DTranspose, Reshape
+from tensorflow.keras.layers import (Add, Conv2D, Conv2DTranspose, Dense,
+                                     Dropout, Flatten, Input, Lambda, Layer,
+                                     MaxPooling2D, Multiply, Reshape,
+                                     UpSampling2D)
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.python.framework.errors_impl import NotFoundError
 
@@ -41,6 +42,7 @@ class KLDivergenceLayer(Layer):
         kl_batch *= self.beta
 
         self.add_loss(K.mean(kl_batch), inputs=inputs)
+        self.add_metric(K.mean(kl_batch), name="KLDiv", aggregation='mean')
 
         return inputs
 
@@ -123,7 +125,7 @@ def load_model(
             epsilon_std=epsilon_std,
             beta=beta,
         )
-        vae.compile(optimizer='rmsprop', loss=nll)
+        vae.compile(optimizer='rmsprop', loss=nll, metrics=[nll])
 
         # Load the state of the old model
         vae.load_weights(os.path.join(model_path, 'vae', ""))
@@ -198,7 +200,7 @@ def make_model(
 
     # Combine the Encoder and Decoder to define the VAE
     vae = Model(x, x_pred)
-    vae.compile(optimizer='rmsprop', loss=nll)
+    vae.compile(optimizer='rmsprop', loss=nll, metrics=[nll])
 
     encoder = Model(x, z_mu)
 
