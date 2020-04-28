@@ -109,3 +109,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+#Models
+Deep-Learning/VAE/models_*/
