@@ -2,10 +2,12 @@
 import json
 import math
 import os
+from os import path
 
 from data import get_data
 from model import (CustomCallback, getTensorboardCallback, gpu_configuration,
                    load_model, make_model, save_model)
+from tensorflow.keras.callbacks import CSVLogger
 
 # Define experiments
 stanford_dogs = {
@@ -107,8 +109,15 @@ def main(
             ),
             getTensorboardCallback(
                 path=model_path,
-            )
+            ),
+            CSVLogger(
+                filename=path.join(model_path, 'losses.csv'),
+                append=True
+            ),
         ],
+        # Verbose=2 shows a lot more warnings,
+        # but it comes out nicer with the additional metrics
+        verbose=2
     )
 
     # Save the model
