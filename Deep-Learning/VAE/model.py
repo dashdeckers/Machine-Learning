@@ -26,6 +26,9 @@ def get_experiment(project_name, resume=False):
             'flatten': layers.Flatten,
             'reshape': layers.Reshape,
             'optimizer': tf.keras.optimizers.Adam,
+
+            # Add more layer functions here as needed
+
         }
         # Get experiment from file
         with open(os.path.join(project_name, 'experiment.json')) as file:
@@ -58,10 +61,10 @@ def get_experiment(project_name, resume=False):
     exp['col_dim'] = int(np.prod(exp['input_shape'][1:]))
 
     # Define the architecture
-    exp['encoder_layers'] = [
+    exp['encoder_layers'] = [       # loss = binary crossentropy
         layers.Flatten(),
         layers.Dense(units=256, activation='relu'),
-        layers.Dense(units=128, activation='relu'),
+        layers.Dense(units=128, activation='relu'),  # sigmoid
     ]
 
     exp['decoder_layers'] = [
