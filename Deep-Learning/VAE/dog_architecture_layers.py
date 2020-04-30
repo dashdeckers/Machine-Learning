@@ -21,7 +21,7 @@ self.layer_list = [
             layers.Dense(self.latent_dim / 2, activation='relu'),  # (64)
             layers.Dense(self.latent_dim / 2, activation='relu'),  # (64,)
             layers.Dense(256, activation='relu'),  # 256
-            layers.Reshape((2,2,-1)),  # (2,2,64)
+            layers.Reshape((2, 2, -1)),  # (2,2,64)
             layers.UpSampling2D(size=(2, 2)),  # (4, 4, 64)
             layers.Conv2DTranspose(self.im_dim[0], (3, 3), activation='relu', data_format='channels_last'),  # 6, 6, 32)
             layers.UpSampling2D(size=(2, 2)),  # (12,12,32)
