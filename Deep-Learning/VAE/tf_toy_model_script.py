@@ -305,8 +305,8 @@ vae.fit(
 )
 
 
-plot_independent_grid(vae.decoder, 2, 1, (28, 28))
-plot_all_2D_manifolds(vae.decoder, 2, 1, (28, 28))
+plot_independent_grid(vae.decoder, exp['latent_dim'], exp['channels'], exp['im_shape'])
+plot_all_2D_manifolds(vae.decoder, exp['latent_dim'], exp['channels'], exp['im_shape'])
 
 
 show_reconstructed_digit(vae)

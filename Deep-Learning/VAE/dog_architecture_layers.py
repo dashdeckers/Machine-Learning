@@ -12,20 +12,20 @@ self.layer_list = [
             layers.Flatten(),
             layers.Dense(input_shape[1]*2, activation='relu'),
             layers.Dropout(0.5),
-            layers.Dense(120, activation='softmax')
+            layers.Dense(self.latent_dim, activation='softmax')
         ]
 
 # Decoder:
 self.layer_list = [
-            layers.Dense(120, activation='softmax'), #(120)
-            layers.Dense(64, activation='relu'),# (64)
-            layers.Dense(64, activation='relu'),# (64,)
-            layers.Dense(256, activation='relu'),# 256
-            layers.Reshape((2,2,-1)), #(2,2,64)
-            layers.UpSampling2D(size=(2, 2)),# (4, 4, 64)
-            layers.Conv2DTranspose(self.im_dim[0], (3, 3), activation='relu', data_format='channels_last'), #(6, 6, 32)
-            layers.UpSampling2D(size=(2, 2)), #(12,12,32)
-            layers.Conv2DTranspose(self.im_dim[0], (4, 4), activation='relu', data_format='channels_last'), #(15,15,32)
-            layers.UpSampling2D(size=(2, 2)), #(30,30,32)
-            layers.Conv2DTranspose(self.im_dim[2], (3, 3), activation='relu', data_format='channels_last'), # (32, 32, 3)
+            layers.Dense(self.latent_dim, activation='softmax'),  # (120)
+            layers.Dense(self.latent_dim / 2, activation='relu'),  # (64)
+            layers.Dense(self.latent_dim / 2, activation='relu'),  # (64,)
+            layers.Dense(256, activation='relu'),  # 256
+            layers.Reshape((2,2,-1)),  # (2,2,64)
+            layers.UpSampling2D(size=(2, 2)),  # (4, 4, 64)
+            layers.Conv2DTranspose(self.im_dim[0], (3, 3), activation='relu', data_format='channels_last'),  # 6, 6, 32)
+            layers.UpSampling2D(size=(2, 2)),  # (12,12,32)
+            layers.Conv2DTranspose(self.im_dim[0], (4, 4), activation='relu', data_format='channels_last'),  # (15,15,32)
+            layers.UpSampling2D(size=(2, 2)),  # (30,30,32)
+            layers.Conv2DTranspose(self.im_dim[2], (3, 3), activation='relu', data_format='channels_last'),  # (32, 32, 3)
         ]
