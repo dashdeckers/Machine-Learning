@@ -1,8 +1,10 @@
 import argparse
+import os
 from itertools import combinations
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from data import get_data
 from model import get_model
@@ -204,6 +206,40 @@ def plot_independent_grid(decoder, exp):
     plot_2D_manifold_of_latent_variables(decoder, exp, (0, 1), True)
 
 
+def plot_losses(project_name, losses):
+    """Plot the losses per epoch.
+
+    losses must be a list containing one or more of the following:
+    ['decomp', 'main', 'val_decomp', 'val_main']
+    """
+    assert isinstance(losses, list)
+    assert set(losses)
+    decomp_losses = ['mi_loss', 'tc_loss', 'dw_kl_loss']
+    main_losses = ['kl_loss', 'rec_loss']
+    val_decomp_losses = ['val_' + loss for loss in decomp_losses]
+    val_main_losses = ['val_' + loss for loss in main_losses]
+
+    df = pd.read_csv(
+        os.path.join(args.name, 'losses.csv'),
+        sep=',',
+    )
+
+    loss_list = list()
+    if 'decomp' in losses:
+        loss_list.extend(decomp_losses)
+    if 'main' in losses:
+        loss_list.extend(main_losses)
+    if 'val_decomp' in losses:
+        loss_list.extend(val_decomp_losses)
+    if 'val_main' in losses:
+        loss_list.extend(val_main_losses)
+
+    df[loss_list].plot()
+    plt.xlabel('Epochs')
+    plt.title('Loss values per epoch')
+    plt.show()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='VAE Plotter')
     parser.add_argument('name', type=str)
@@ -218,6 +254,7 @@ if __name__ == '__main__':
     )
 
     # Use CTRL+C to quit early
+    plot_losses(args.name, ['decomp', 'main'])
     plot_digit_classes_in_latent_space(vae.encoder, exp)
-    plot_independent_grid(vae.decoder, exp)
+    # plot_independent_grid(vae.decoder, exp)
     plot_all_2D_manifolds(vae.decoder, exp)

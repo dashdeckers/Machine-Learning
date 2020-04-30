@@ -6,9 +6,6 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from scipy.special import kl_div, rel_entr
-from scipy.stats import entropy
-from sklearn.metrics import mutual_info_score
 from tensorflow.keras import layers
 
 tf.keras.backend.set_floatx('float64')
@@ -53,18 +50,22 @@ def get_experiment(project_name, resume=False):
         'epochs': 10,
 
         'latent_dim': 2,
+        'alpha': 1.0,
         'beta': 1.0,
-        'optimizer': tf.keras.optimizers.Adam(),  # rmsprop
+        'gamma': 1.0,
+        'distribution': 'gaussian',
+
+        'optimizer': tf.keras.optimizers.Adam(),
     }
     exp['im_shape'] = exp['input_shape'][1:3]
     exp['channels'] = exp['input_shape'][3]
     exp['col_dim'] = int(np.prod(exp['input_shape'][1:]))
 
     # Define the architecture
-    exp['encoder_layers'] = [       # loss = binary crossentropy
+    exp['encoder_layers'] = [
         layers.Flatten(),
         layers.Dense(units=256, activation='relu'),
-        layers.Dense(units=128, activation='relu'),  # sigmoid
+        layers.Dense(units=128, activation='relu'),
     ]
 
     exp['decoder_layers'] = [
@@ -234,7 +235,9 @@ class VariationalAutoEncoder(tf.keras.Model):
     def __init__(self, exp, name='VAE', **kwargs):
         super(VariationalAutoEncoder, self).__init__(name=name, **kwargs)
         self.im_shape = exp['im_shape']
+        self.alpha = exp['alpha']
         self.beta = exp['beta']
+        self.gamma = exp['gamma']
         self.exp = exp
 
     def build(self, input_shape):
@@ -242,70 +245,117 @@ class VariationalAutoEncoder(tf.keras.Model):
         self.encoder = Encoder(exp=self.exp)
         self.decoder = Decoder(exp=self.exp)
 
-    """
-    Just testing these methods.
-    """
-    @staticmethod
-    def kl_divergence(p, q):
-        assert len(p) == len(q), 'Must have the same length'
-        assert sum(p) == sum(q) == 1, 'Must sum to 1 to be a probability dist.'
-        return sum(p[i] * math.log2(p[i]/q[i]) for i in range(len(p)))
-
-    @staticmethod
-    def kl_divergence_lib(p, q):
-        return (rel_entr(p, q), kl_div(p, q), entropy(p, q))
-
-    @staticmethod
-    def mutual_information(p, q):
-        return mutual_info_score(p, q)
-
-    """
-    Don't rely on them just yet.
-    """
-
     def call(self, inputs):
         z_mean, z_log_var, z = self.encoder(inputs)
         reconstructed = self.decoder(z)
 
-        # Add KL divergence loss
-        # TODO: This calculation needs to be dissected into the 3 parts from
-        # the ELBO TC-Decomposition (See the VAE paper)
-        kl_loss = (
-            - 0.5
-            * tf.reduce_mean(
-                z_log_var
-                - tf.square(z_mean)
-                - tf.exp(z_log_var)
-                + 1
-            )
+        # Compute main losses
+        rec_loss = self.reconstruction_loss(
+            inputs, reconstructed, self.exp['distribution']
         )
+        kl_loss = self.KL_loss_to_unit_normal(z_mean, z_log_var)
 
-        """
-        kl_loss = mutual_info + total_corr + dim_wise_kl
+        # Compute decomposed losses
+        q_zx, p_z, q_z, prod_q_zi = self.get_probs(z, z_mean, z_log_var)
 
-        This guy says mutual information can be computed via the
-        scipy library function:
-        https://datascience.stackexchange.com/questions/9262/calculating-kl-divergence-in-python
+        mi_loss = tf.reduce_mean(q_zx - q_z)
+        tc_loss = tf.reduce_mean(q_z - prod_q_zi)
+        dw_kl_loss = tf.reduce_mean(prod_q_zi - p_z)
 
-        Mutual information is the function
+        # Add losses
+        loss = rec_loss + (self.alpha * mi_loss +
+                           self.beta * tc_loss +
+                           self.gamma * dw_kl_loss)
+        self.add_loss(loss, inputs=inputs)
 
-        Total correlation is KL( q(z) || PROD q(z_j) )
+        self.add_metric(rec_loss, aggregation='mean', name='rec_loss')
+        self.add_metric(kl_loss, aggregation='mean', name='kl_loss')
+        self.add_metric(mi_loss, aggregation='mean', name='mi_loss')
+        self.add_metric(tc_loss, aggregation='mean', name='tc_loss')
+        self.add_metric(dw_kl_loss, aggregation='mean', name='dw_kl_loss')
 
-        Dimensionwise KL is SUM: KL( q(z_j) || p(z_j) )
-        """
-
-        # Add negative log likelihood loss (likelihood of the data)
-        # This regularization term is currently set as the L2 norm (MSE)
-        # but it can also be categorical cross entropy if the sigmoid
-        # is used in the output layer so that all values are in [0, 1]
-
-        rec_loss = tf.reduce_sum(
-            tf.square(inputs[0, :, :, :] - reconstructed[0, :, :, :])
-        )
-
-        self.add_loss(tf.reduce_mean(rec_loss + kl_loss), inputs=inputs)
-
-        # breakpoint()
-
-        # TODO: Save reconstructed image everytime to see the quality increase?
         return reconstructed
+
+    def reconstruction_loss(self, inputs, reconstructed, distribution):
+        batch_size, height, width, channels = inputs.shape
+        batch_size = self.exp['batch_size']
+
+        # Bernoulli distribution is for categorical classification,
+        # (maybe) because BinaryCrossentropy is used for that.
+        # This also requires the values to be in [0, 1], so use a
+        # sigmoidal activation on the last decoder layer.
+        if distribution == 'bernoulli':
+            loss_func = tf.keras.losses.BinaryCrossentropy(
+                reduction=tf.keras.losses.Reduction.SUM
+            )
+
+        # Gaussian distribution is for continuous (pixel) variables
+        # which corresponds to the L2 norm (MSE loss).
+        elif distribution == 'gaussian':
+            loss_func = tf.keras.losses.MeanSquaredError(
+                reduction=tf.keras.losses.Reduction.SUM
+            )
+
+        loss = loss_func(inputs, reconstructed)
+        return loss / batch_size
+
+    def KL_loss_to_unit_normal(self, mu, logvar):
+        """Calculate KL divergence between a normal dist and a unit normal."""
+        return 0.5 * tf.reduce_mean(tf.reduce_sum(
+            tf.square(mu) + tf.exp(logvar) - logvar - 1, [1]), name="kl_loss")
+
+    def log_density_gaussian(self, x, mu, logvar):
+        """Calculate log density of a Gaussian."""
+        pi = tf.constant(math.pi, dtype=tf.float64)
+        normalization = tf.math.log(2. * pi)
+        inv_sigma = tf.exp(-logvar)
+        tmp = (x - mu)
+        return -0.5 * (tmp * tmp * inv_sigma + logvar + normalization)
+
+    def matrix_log_density_gaussian(self, x, mu, logvar):
+        """Calculate log density of a Gaussian for all combination of batch pairs.
+
+        I.e. return tensor of shape `(batch_size, batch_size, dim)`
+        instead of (batch_size, dim) in the usual log density.
+        """
+        batch_size, latent_dim = x.shape
+        batch_size = self.exp['batch_size']
+
+        x = x.copy().reshape(batch_size, 1, latent_dim)
+        mu = mu.copy().reshape(1, batch_size, latent_dim)
+        logvar = logvar.copy().reshape(1, batch_size, latent_dim)
+
+        matrix = self.log_density_gaussian(x, mu, logvar)
+        assert matrix.shape == (batch_size, batch_size, latent_dim)
+
+        return matrix
+
+    def get_probs(self, z, mu, logvar):
+        """Compute all the necessary probabilities."""
+        batch_size, latent_dim = z.shape
+        batch_size = self.exp['batch_size']
+
+        zeros = tf.zeros(shape=(batch_size, latent_dim), dtype=tf.float64)
+
+        log_q_zx = tf.reduce_sum(
+            self.log_density_gaussian(z, mu, logvar), axis=1, keepdims=False
+        )
+        log_p_z = tf.reduce_sum(
+            self.log_density_gaussian(z, zeros, zeros), axis=1, keepdims=False
+        )
+
+        mat_log_q_z = self.log_density_gaussian(
+            tf.expand_dims(z, 1),
+            tf.expand_dims(mu, 0),
+            tf.expand_dims(logvar, 0)
+        )
+
+        log_q_z = tf.reduce_logsumexp(tf.reduce_sum(
+            mat_log_q_z, axis=2, keepdims=False), axis=1, keepdims=False
+        )
+
+        log_prod_q_zi = tf.reduce_sum(tf.reduce_logsumexp(
+            mat_log_q_z, axis=1, keepdims=False), axis=1, keepdims=False
+        )
+
+        return log_q_zx, log_p_z, log_q_z, log_prod_q_zi
