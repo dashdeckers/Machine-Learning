@@ -1,5 +1,7 @@
 import math
+from collections import defaultdict
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from data import get_data
@@ -10,36 +12,6 @@ from scipy.special import logsumexp
 def print_shit(**kwargs):
     for key, value in kwargs.items():
         print(f'{key}: {value}')
-
-
-# Init the model and exp
-project_name = 'testing'
-vae, exp = get_model(project_name, resume=True)
-vae.predict(tf.zeros(exp['input_shape']))
-
-# Play with the batch size
-exp['batch_size'] = 32
-
-# Get a batch of data
-_, test, _ = get_data(
-    batch_size=exp['batch_size'],
-    im_shape=exp['im_shape'],
-    labels=True,
-    dataset=exp['dataset'],
-)
-images, labels = list(test.take(1).as_numpy_iterator())[0]
-
-# Feed it to the model
-z_mean, z_log_var, z_sample = vae.encoder(images)
-reconstructed = vae.decoder(z_sample)
-
-# Convert from tensorflow to pure numpy
-z_sample = z_sample.numpy()
-z_log_var = z_log_var.numpy()
-z_mean = z_mean.numpy()
-
-# z is a batch of samples with dimension latent_dim
-assert z_sample.shape == (exp['batch_size'], exp['latent_dim'])
 
 
 def log_density_gaussian(x, mu, logvar):
@@ -92,7 +64,7 @@ def matrix_log_density_gaussian(x, mu, logvar):
     return matrix
 
 
-def get_probs(z_sample, z_mean, z_log_var, N_data):
+def get_probs(z_sample, z_mean, z_log_var):
     batch_size, latent_dim = z_sample.shape
     zeros = np.zeros(shape=(batch_size, latent_dim))
 
@@ -101,8 +73,10 @@ def get_probs(z_sample, z_mean, z_log_var, N_data):
 
     mat_log_q_z = matrix_log_density_gaussian(z_sample, z_mean, z_log_var)
 
+    # Skipping MSS here, what is that exactly and do we need it?
+
     # Using the SciPy implementation of logsumexp. Do they use a different
-    # log base maybe??
+    # log base maybe?? -- nope, they use np.log
     log_q_z = logsumexp(mat_log_q_z.sum(axis=2), axis=1)
     log_prod_q_zi = logsumexp(mat_log_q_z, axis=1).sum(axis=1)
 
@@ -116,19 +90,19 @@ def get_probs(z_sample, z_mean, z_log_var, N_data):
         == (batch_size,)
     )
 
-    return log_q_zx, log_p_z, mat_log_q_z, log_q_z, log_prod_q_zi
+    return log_q_zx, log_p_z, log_q_z, log_prod_q_zi
 
 
-def reconstruction_loss(inputs, reconstructed, distribution):
-    batch_size, height, width, channels = inputs.shape
+def reconstruction_loss(batch, reconstructed, distribution):
+    batch_size, height, width, channels = batch.shape
 
     if distribution == 'bernoulli':
         loss_func = tf.keras.losses.BinaryCrossentropy()
-        loss = loss_func(reconstructed, inputs)
+        loss = loss_func(reconstructed, batch)
 
     elif distribution == 'gaussian':
         loss_func = tf.keras.losses.MeanSquaredError()
-        loss = loss_func(reconstructed * 255, inputs * 255) / 255
+        loss = loss_func(reconstructed * 255, batch * 255) / 255
 
     loss = loss / batch_size
 
@@ -157,6 +131,83 @@ def KL_loss_to_unit_normal(mu, logvar):
     return total_kl
 
 
+def main(n_iterations, project_name='testing'):
+    # Init the model and exp
+    vae, exp = get_model(project_name, resume=True)
+    vae.predict(tf.zeros(exp['input_shape']))
+
+    # Get the data iterator
+    _, test, _ = get_data(
+        batch_size=exp['batch_size'],
+        im_shape=exp['im_shape'],
+        labels=True,
+        dataset=exp['dataset'],
+    )
+    numpy_iter = test.as_numpy_iterator()
+
+    # Define metrics to store them later
+    global losses, output, probs
+    losses = {'kl_loss', 'rec_loss', 'mi_loss', 'tc_loss', 'dw_kl_loss', 'summed_KL_loss'}
+    output = {'z_mean', 'z_log_var', 'z_sample'}
+    probs = {'q_zx', 'p_z', 'q_z', 'prod_q_zi'}
+    store = defaultdict(list)
+
+    for i in range(n_iterations):
+        try:
+            # Get a batch of data
+            images, labels = numpy_iter.next()
+            print(labels)
+
+        except StopIteration:
+            # Unless theres no more
+            break
+
+        # Feed the batch to the model
+        z_mean, z_log_var, z_sample = vae.encoder(images)
+        reconstructed = vae.decoder(z_sample)
+
+        # Convert from tensorflow to pure numpy
+        z_sample = z_sample.numpy()
+        z_log_var = z_log_var.numpy()
+        z_mean = z_mean.numpy()
+
+        # z is a batch of samples with dimension latent_dim
+        assert z_sample.shape == (exp['batch_size'], exp['latent_dim'])
+
+        # Compute losses
+        rec_loss = reconstruction_loss(images, reconstructed, 'gaussian')
+        rec_loss = rec_loss.numpy()
+
+        kl_loss = KL_loss_to_unit_normal(z_mean, z_log_var)
+
+        q_zx, p_z, q_z, prod_q_zi = get_probs(z_sample, z_mean, z_log_var)
+
+        mi_loss = (q_zx - q_z).mean()
+        tc_loss = (q_z - prod_q_zi).mean()
+        dw_kl_loss = (prod_q_zi - p_z).mean()
+        summed_KL_loss = mi_loss + tc_loss + dw_kl_loss
+
+        # Store metrics
+        var_dict = locals()
+        for key, value in var_dict.items():
+            if key in set.union(losses, output, probs):
+                store[key].append(value)
+
+    return store
+
+
+# kl_loss_new == kl_loss_old * 2 (bit wierd, but not an issue)
+# kl_loss_new == summed_KL_loss (almost!! why??)
+
+n = 10
+store = main(n)
+for key in losses:
+    plt.plot(range(n), store[key], label=key)
+
+plt.legend()
+plt.show()
+
+"""
 # Old losses
 kl_loss_old = (
     - 0.5
@@ -173,31 +224,6 @@ rec_loss_old = tf.reduce_sum(
 ).numpy()
 
 
-# New losses
-kl_loss_new = KL_loss_to_unit_normal(z_mean, z_log_var)
-
-q_zx, p_z, mat_q_z, q_z, prod_q_zi = get_probs(z_sample, z_mean, z_log_var, 1)
-
-rec_loss_new = reconstruction_loss(images, reconstructed, 'gaussian')
-
-mi_loss = (q_zx - q_z).mean()
-tc_loss = (q_z - prod_q_zi).mean()
-dw_kl_loss = (prod_q_zi - p_z).mean()
-summed_KL_loss = mi_loss + tc_loss + dw_kl_loss
-
-
-print_shit(
-    rec_loss_old=rec_loss_old,
-    KL_loss_old=kl_loss_old,
-    b1='',
-    rec_loss_new=rec_loss_new,
-    KL_loss_new=kl_loss_new,
-    b2='',
-    summed_KL_loss=summed_KL_loss,
-)
-
-
-"""
 # Add KL divergence loss
 # TODO: This calculation needs to be dissected into the 3 parts from
 # the ELBO TC-Decomposition (See the VAE paper)
