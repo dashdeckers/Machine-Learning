@@ -122,8 +122,13 @@ class Encoder(tf.keras.Model):
         assert input_shape[1:] == self.exp['input_shape'][1:]
 
         self.flatten = layers.Flatten()
-        self.dense_mean = layers.Dense(units=self.latent_dim)
-        self.dense_log_var = layers.Dense(units=self.latent_dim)
+
+        self.dense_mean = layers.Dense(units=128, activation='softmax')
+        self.out_mean = layers.Dense(units=self.latent_dim, activation='linear')
+
+        self.dense_log_var = layers.Dense(units=128, activation='softmax')
+        self.out_log_var = layers.Dense(units=self.latent_dim, activation='linear')
+
         self.sampling = Sampling(latent_dim=self.latent_dim)
 
         show_shapes(
@@ -139,8 +144,8 @@ class Encoder(tf.keras.Model):
         output = self.flatten(output)
 
         # Split to get (mean, variance) for each z
-        z_mean = self.dense_mean(output)
-        z_log_var = self.dense_log_var(output)
+        z_mean = self.out_mean(self.dense_mean(output))
+        z_log_var = self.out_log_var(self.dense_log_var(output))
 
         # Sample from (mean, variance) to get z
         z = self.sampling((z_mean, z_log_var))
