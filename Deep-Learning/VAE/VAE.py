@@ -7,7 +7,8 @@ from data import get_data
 from model import get_model, gpu_configuration
 
 tf.keras.backend.set_floatx('float64')
-checkpoint_format = 'e{epoch:02d}-l{val_loss:.2f}.h5'
+# checkpoint_format = 'e{epoch:02d}-l{val_loss:.2f}.h5'
+checkpoint_format = 'checkpoint.h5'
 
 # Parse arguments. Require the user to provide a project/run name
 parser = argparse.ArgumentParser(description='VAE')
