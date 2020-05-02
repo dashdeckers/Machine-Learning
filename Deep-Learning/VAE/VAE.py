@@ -51,7 +51,8 @@ vae.fit(
         tf.keras.callbacks.ModelCheckpoint(
             filepath=os.path.join(args.name, checkpoint_format),
             save_weights_only=True,
-            save_best_only=False,
+            save_best_only=True,
+            mode='auto',
             monitor='val_loss',
             save_freq='epoch',
             verbose=1,

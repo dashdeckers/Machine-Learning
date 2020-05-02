@@ -47,9 +47,9 @@ def get_experiment(project_name, resume=False):
     exp = {
         'project_name': project_name,
         'dataset': 'stanford_dogs',  # 'mnist'
-        'input_shape': (1, 256, 256, 3),  # (1, 28, 28, 1)
+        'input_shape': (1, 128, 128, 3),  # (1, 28, 28, 1)
         'batch_size': 64,
-        'epochs': 1,
+        'epochs': 500,
 
         'latent_dim': 120,
         'alpha': 1.0,
@@ -111,10 +111,10 @@ def get_experiment(project_name, resume=False):
             activation='relu'
         ),
         layers.Dense(
-            units=124928,
+            units=16384,
             activation='relu'
         ),
-        layers.Reshape(target_shape=(16, 16, 488)),
+        layers.Reshape(target_shape=(8, 8, 256)),
         layers.Conv2DTranspose(
             filters=exp['input_shape'][1] * 2,
             kernel_size=(4, 4),
