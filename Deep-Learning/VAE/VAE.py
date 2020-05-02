@@ -40,6 +40,7 @@ vae.fit(
     steps_per_epoch=info.steps_per_epoch,
     validation_data=test,
     validation_steps=info.validation_steps,
+    verbose=1,
     callbacks=[
         # Log validation losses
         tf.keras.callbacks.CSVLogger(
