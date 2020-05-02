@@ -46,12 +46,12 @@ def get_experiment(project_name, resume=False):
     # Define the experiment
     exp = {
         'project_name': project_name,
-        'dataset': 'stanford_dogs',  # 'mnist'
-        'input_shape': (1, 32, 32, 3),  # (1, 28, 28, 1)
+        'dataset': 'mnist',  # 'stanford_dogs'
+        'input_shape': (1, 28, 28, 1),  # (1, 32, 32, 3)
         'batch_size': 64,
         'epochs': 20,
 
-        'latent_dim': 120,
+        'latent_dim': 2,
         'alpha': 1.0,
         'beta': 1.0,
         'gamma': 1.0,
@@ -72,17 +72,27 @@ def get_experiment(project_name, resume=False):
             activation='relu',
             data_format='channels_last'
         ),
-        layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(
             filters=exp['input_shape'][1],
             kernel_size=(3, 3),
             activation='relu',
             data_format='channels_last'
         ),
-        layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Flatten(),
         layers.Dense(
-            units=exp['input_shape'][1] * 2,
+            units=exp['input_shape'][1] * 200,
+            activation='relu'
+        ),
+        layers.Dense(
+            units=exp['input_shape'][1] * 100,
+            activation='relu'
+        ),
+        layers.Dense(
+            units=exp['input_shape'][1] * 50,
+            activation='relu'
+        ),
+        layers.Dense(
+            units=exp['input_shape'][1] * 25,
             activation='relu'
         ),
         layers.Dense(
@@ -97,33 +107,37 @@ def get_experiment(project_name, resume=False):
             activation='relu'
         ),
         layers.Dense(
-            units=int(exp['input_shape'][1] * 2),  # * instead of /
+            units=int(exp['input_shape'][1] * 25),
             activation='relu'
         ),
         layers.Dense(
-            units=1152,
+            units=int(exp['input_shape'][1] * 50),
             activation='relu'
         ),
-        layers.Reshape(target_shape=(6, 6, 32)),  # -1 doesn't work
-        layers.UpSampling2D(size=(2, 2)),
+        layers.Dense(
+            units=int(exp['input_shape'][1] * 100),
+            activation='relu'
+        ),
+        layers.Dense(
+            units=int(exp['input_shape'][1] * 200),
+            activation='relu'
+        ),
+        layers.Dense(
+            units=17500,
+            activation='relu'
+        ),
+        layers.Reshape(target_shape=(25, 25, 28)),  # -1 doesn't work
         layers.Conv2DTranspose(
             filters=exp['input_shape'][1],
             kernel_size=(3, 3),
             activation='relu',
             data_format='channels_last'
         ),
-        layers.UpSampling2D(size=(2, 2)),
         layers.Conv2DTranspose(
             filters=exp['input_shape'][1],
-            kernel_size=(4, 4),
-            activation='relu',
-            data_format='channels_last'
-        ),
-        layers.Conv2DTranspose(
-            filters=exp['channels'],
             kernel_size=(2, 2),
             activation='relu',
             data_format='channels_last'
-        )
+        ),
     ]
     return exp
