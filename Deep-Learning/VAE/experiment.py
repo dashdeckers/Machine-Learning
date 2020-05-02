@@ -47,11 +47,11 @@ def get_experiment(project_name, resume=False):
     exp = {
         'project_name': project_name,
         'dataset': 'stanford_dogs',  # 'mnist'
-        'input_shape': (1, 64, 64, 3),  # (1, 28, 28, 1)
+        'input_shape': (1, 244, 244, 3),  # (1, 28, 28, 1)
         'batch_size': 64,
-        'epochs': 100,
+        'epochs': 1,
 
-        'latent_dim': 20,
+        'latent_dim': 120,
         'alpha': 1.0,
         'beta': 1.0,
         'gamma': 1.0,
@@ -75,6 +75,14 @@ def get_experiment(project_name, resume=False):
             data_format='channels_last'
         ),
         layers.Conv2D(
+            filters=exp['input_shape'][1],
+            kernel_size=(3, 3),
+            strides=(2, 2),
+            padding='same',
+            activation='relu',
+            data_format='channels_last'
+        ),
+        layers.Conv2D(
             filters=exp['input_shape'][1] * 2,
             kernel_size=(3, 3),
             strides=(2, 2),
@@ -83,7 +91,7 @@ def get_experiment(project_name, resume=False):
             data_format='channels_last'
         ),
         layers.Conv2D(
-            filters=exp['input_shape'][1] * 4,
+            filters=exp['input_shape'][1] * 2,
             kernel_size=(3, 3),
             strides=(2, 2),
             padding='same',
@@ -103,12 +111,20 @@ def get_experiment(project_name, resume=False):
             activation='relu'
         ),
         layers.Dense(
-            units=16384,
+            units=124928,
             activation='relu'
         ),
-        layers.Reshape(target_shape=(8, 8, 256)),
+        layers.Reshape(target_shape=(16, 16, 488)),
         layers.Conv2DTranspose(
             filters=exp['input_shape'][1] * 2,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding='same',
+            activation='relu',
+            data_format='channels_last'
+        ),
+        layers.Conv2DTranspose(
+            filters=exp['input_shape'][1],
             kernel_size=(4, 4),
             strides=(2, 2),
             padding='same',

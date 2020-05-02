@@ -74,9 +74,9 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
             info.splits["test"].num_examples / batch_size
     ))
 
-    if dataset == 'stanford_dogs':
-        crop_dogs(train_data)
-        crop_dogs(test_data)
+    # if dataset == 'stanford_dogs':
+    #     crop_dogs(train_data)
+    #     crop_dogs(test_data)
 
     train = (
         train_data
