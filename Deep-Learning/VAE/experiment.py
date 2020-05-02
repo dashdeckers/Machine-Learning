@@ -134,7 +134,7 @@ def get_experiment(project_name, resume=False):
             data_format='channels_last'
         ),
         layers.Conv2DTranspose(
-            filters=exp['input_shape'][1],
+            filters=exp['channels'],
             kernel_size=(2, 2),
             activation='relu',
             data_format='channels_last'
