@@ -46,12 +46,12 @@ def get_experiment(project_name, resume=False):
     # Define the experiment
     exp = {
         'project_name': project_name,
-        'dataset': 'mnist',  # 'stanford_dogs'
-        'input_shape': (1, 28, 28, 1),  # (1, 32, 32, 3)
+        'dataset': 'stanford_dogs',  # 'mnist'
+        'input_shape': (1, 32, 32, 3),  # (1, 28, 28, 1)
         'batch_size': 64,
-        'epochs': 20,
+        'epochs': 1,
 
-        'latent_dim': 2,
+        'latent_dim': 20,
         'alpha': 1.0,
         'beta': 1.0,
         'gamma': 1.0,
@@ -67,75 +67,67 @@ def get_experiment(project_name, resume=False):
     exp['encoder_layers'] = [
         layers.Conv2D(
             filters=exp['input_shape'][1],
-            kernel_size=(2, 2),
+            kernel_size=(3, 3),
+            strides=(2, 2),
+            padding='same',
             input_shape=exp['input_shape'],
             activation='relu',
             data_format='channels_last'
         ),
         layers.Conv2D(
-            filters=exp['input_shape'][1],
+            filters=exp['input_shape'][1] * 2,
             kernel_size=(3, 3),
+            strides=(2, 2),
+            padding='same',
+            activation='relu',
+            data_format='channels_last'
+        ),
+        layers.Conv2D(
+            filters=exp['input_shape'][1] * 4,
+            kernel_size=(3, 3),
+            strides=(2, 2),
+            padding='same',
             activation='relu',
             data_format='channels_last'
         ),
         layers.Flatten(),
         layers.Dense(
-            units=exp['input_shape'][1] * 200,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=exp['input_shape'][1] * 100,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=exp['input_shape'][1] * 50,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=exp['input_shape'][1] * 25,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=exp['latent_dim'],
+            units=exp['input_shape'][1] * 4,
             activation='relu'
         ),
     ]
 
     exp['decoder_layers'] = [
         layers.Dense(
-            units=exp['latent_dim'],
+            units=exp['input_shape'][1] * 4,
             activation='relu'
         ),
         layers.Dense(
-            units=int(exp['input_shape'][1] * 25),
+            units=2048,
             activation='relu'
         ),
-        layers.Dense(
-            units=int(exp['input_shape'][1] * 50),
-            activation='relu'
+        layers.Reshape(target_shape=(4, 4, 128)),
+        layers.Conv2DTranspose(
+            filters=exp['input_shape'][1] * 2,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding='same',
+            activation='relu',
+            data_format='channels_last'
         ),
-        layers.Dense(
-            units=int(exp['input_shape'][1] * 100),
-            activation='relu'
-        ),
-        layers.Dense(
-            units=int(exp['input_shape'][1] * 200),
-            activation='relu'
-        ),
-        layers.Dense(
-            units=17500,
-            activation='relu'
-        ),
-        layers.Reshape(target_shape=(25, 25, 28)),  # -1 doesn't work
         layers.Conv2DTranspose(
             filters=exp['input_shape'][1],
-            kernel_size=(3, 3),
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding='same',
             activation='relu',
             data_format='channels_last'
         ),
         layers.Conv2DTranspose(
             filters=exp['channels'],
-            kernel_size=(2, 2),
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding='same',
             activation='relu',
             data_format='channels_last'
         ),
