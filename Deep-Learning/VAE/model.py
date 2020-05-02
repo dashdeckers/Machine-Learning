@@ -123,11 +123,23 @@ class Encoder(tf.keras.Model):
 
         self.flatten = layers.Flatten()
 
-        self.dense_mean = layers.Dense(units=128, activation='softmax')
-        self.out_mean = layers.Dense(units=self.latent_dim, activation='linear')
+        self.dense_mean = layers.Dense(
+            units=128,
+            activation='softmax'
+        )
+        self.out_mean = layers.Dense(
+            units=self.latent_dim,
+            activation='linear'
+        )
 
-        self.dense_log_var = layers.Dense(units=128, activation='softmax')
-        self.out_log_var = layers.Dense(units=self.latent_dim, activation='linear')
+        self.dense_log_var = layers.Dense(
+            units=128,
+            activation='softmax'
+        )
+        self.out_log_var = layers.Dense(
+            units=self.latent_dim,
+            activation='linear'
+        )
 
         self.sampling = Sampling(latent_dim=self.latent_dim)
 
