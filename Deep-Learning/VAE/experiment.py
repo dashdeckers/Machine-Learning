@@ -49,7 +49,7 @@ def get_experiment(project_name, resume=False):
         'dataset': 'stanford_dogs',  # 'mnist'
         'input_shape': (1, 64, 64, 3),  # (1, 28, 28, 1)
         'batch_size': 64,
-        'epochs': 20,
+        'epochs': 100,
 
         'latent_dim': 20,
         'alpha': 1.0,
