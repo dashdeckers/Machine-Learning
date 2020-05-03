@@ -148,3 +148,4 @@ def get_experiment(project_name, resume=False):
             data_format='channels_last'
         ),
     ]
+    return exp
