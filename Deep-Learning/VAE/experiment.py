@@ -51,7 +51,7 @@ def get_experiment(project_name, resume=False):
         'batch_size': 64,
         'epochs': 25,
 
-        'latent_dim': 20,
+        'latent_dim': 120,
         'alpha': 1.0,
         'beta': 1.0,
         'gamma': 1.0,
