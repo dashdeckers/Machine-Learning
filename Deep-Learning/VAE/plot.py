@@ -181,7 +181,7 @@ def plot_2D_manifold_of_latent_variables(
         cmap = 'viridis'
 
     # Plot the manifold
-    plt.figure(figsize=(64, 64))
+    plt.figure(figsize=(32, 32))
     plt.tick_params(
         axis='both',
         which='both',
