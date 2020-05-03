@@ -111,7 +111,7 @@ def get_experiment(project_name, resume=False):
             activation='relu'
         ),
         layers.Dense(
-            units=16384,
+            units=exp['input_shape'][1] * exp['input_shape'][2],
             activation='relu'
         ),
         layers.Reshape(target_shape=(8, 8, 256)),
