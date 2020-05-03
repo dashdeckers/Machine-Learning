@@ -15,6 +15,9 @@ def preprocessing(data, im_shape, labels=False):
     image = image / 255.0
     # Resize the image
     image = tf.image.resize(image, im_shape)
+    # Explicitly cast back to float64 to avoid warnings when
+    # it is fed to the network
+    image = tf.cast(image, tf.float64)
 
     if labels:
         return image, data["label"]
