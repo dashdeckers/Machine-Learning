@@ -47,13 +47,13 @@ def get_experiment(project_name, resume=False):
     exp = {
         'project_name': project_name,
         'dataset': 'stanford_dogs',  # 'mnist'
-        'input_shape': (1, 128, 128, 3),  # (1, 28, 28, 1)
+        'input_shape': (1, 64, 64, 3),  # (1, 28, 28, 1)
         'batch_size': 64,
-        'epochs': 500,
+        'epochs': 100,
 
-        'latent_dim': 120,
+        'latent_dim': 30,
         'alpha': 1.0,
-        'beta': 1.0,
+        'beta': 1.5,
         'gamma': 1.0,
         'distribution': 'gaussian',
 
@@ -75,14 +75,6 @@ def get_experiment(project_name, resume=False):
             data_format='channels_last'
         ),
         layers.Conv2D(
-            filters=exp['input_shape'][1],
-            kernel_size=(3, 3),
-            strides=(2, 2),
-            padding='same',
-            activation='relu',
-            data_format='channels_last'
-        ),
-        layers.Conv2D(
             filters=exp['input_shape'][1] * 2,
             kernel_size=(3, 3),
             strides=(2, 2),
@@ -91,7 +83,7 @@ def get_experiment(project_name, resume=False):
             data_format='channels_last'
         ),
         layers.Conv2D(
-            filters=exp['input_shape'][1] * 2,
+            filters=exp['input_shape'][1] * 4,
             kernel_size=(3, 3),
             strides=(2, 2),
             padding='same',
@@ -117,14 +109,6 @@ def get_experiment(project_name, resume=False):
         layers.Reshape(target_shape=(8, 8, 256)),
         layers.Conv2DTranspose(
             filters=exp['input_shape'][1] * 2,
-            kernel_size=(4, 4),
-            strides=(2, 2),
-            padding='same',
-            activation='relu',
-            data_format='channels_last'
-        ),
-        layers.Conv2DTranspose(
-            filters=exp['input_shape'][1],
             kernel_size=(4, 4),
             strides=(2, 2),
             padding='same',
