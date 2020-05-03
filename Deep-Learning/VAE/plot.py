@@ -256,5 +256,5 @@ if __name__ == '__main__':
     # Use CTRL+C to quit early
     plot_losses(args.name, ['decomp', 'main'])
     plot_digit_classes_in_latent_space(vae.encoder, exp)
-    # plot_independent_grid(vae.decoder, exp)
-    plot_all_2D_manifolds(vae.decoder, exp)
+    plot_independent_grid(vae.decoder, exp)
+    # plot_all_2D_manifolds(vae.decoder, exp)
