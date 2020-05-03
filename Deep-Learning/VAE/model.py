@@ -251,24 +251,6 @@ class VariationalAutoEncoder(tf.keras.Model):
         tmp = (x - mu)
         return -0.5 * (tmp * tmp * inv_sigma + logvar + normalization)
 
-    def matrix_log_density_gaussian(self, x, mu, logvar):
-        """Calculate log density of a Gaussian for all combination of batch pairs.
-
-        I.e. return tensor of shape `(batch_size, batch_size, dim)`
-        instead of (batch_size, dim) in the usual log density.
-        """
-        batch_size, latent_dim = x.shape
-        batch_size = self.exp['batch_size']
-
-        x = x.copy().reshape(batch_size, 1, latent_dim)
-        mu = mu.copy().reshape(1, batch_size, latent_dim)
-        logvar = logvar.copy().reshape(1, batch_size, latent_dim)
-
-        matrix = self.log_density_gaussian(x, mu, logvar)
-        assert matrix.shape == (batch_size, batch_size, latent_dim)
-
-        return matrix
-
     def get_probs(self, z, mu, logvar):
         """Compute all the necessary probabilities."""
         batch_size, latent_dim = z.shape
