@@ -105,6 +105,6 @@ def get_experiment(project_name, resume=False):
             units=int(12288),
             activation='relu',
         ),
-        layers.Reshape(target_shape=(64, 64, 3)),
+        layers.Reshape(target_shape=exp['input_shape'][1:]),
     ]
     return exp
