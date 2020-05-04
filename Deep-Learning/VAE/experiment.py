@@ -90,53 +90,12 @@ def get_experiment(project_name, resume=False):
             activation='relu',
             data_format='channels_last'
         ),
-        layers.Flatten(),
-        layers.Dense(
-            units=16384 / 2,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=16384 / 4,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=16384 / 8,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=16384 / 16,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=exp['input_shape'][1] * 4,
-            activation='relu'
-        ),
     ]
 
     exp['decoder_layers'] = [
         layers.Dense(
-            units=exp['input_shape'][1] * 4,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=16384 / 16,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=16384 / 8,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=16384 / 4,
-            activation='relu'
-        ),
-        layers.Dense(
-            units=16384 / 2,
-            activation='relu'
-        ),
-        layers.Dense(
             units=16384,
-            activation='relu'
+            activation='relu',
         ),
         layers.Reshape(target_shape=(8, 8, 256)),
         layers.Conv2DTranspose(
