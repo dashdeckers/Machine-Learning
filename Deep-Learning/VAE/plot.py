@@ -142,7 +142,7 @@ def plot_2D_manifold_of_latent_variables(
 
     Then, we get an image prediction for each point in the grid and plot them.
     """
-    latent_dim = int(exp['latent_dim'] / 4)
+    latent_dim = exp['latent_dim']
     channels = exp['channels']
     im_shape = exp['im_shape']
 
