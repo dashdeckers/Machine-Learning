@@ -81,12 +81,13 @@ exp['decoder_layers'] = [
 
 # Architecture 3 - Bigger Images
 # Define the experiment
+
     exp = {
         'project_name': project_name,
         'dataset': 'stanford_dogs',  # 'mnist'
         'input_shape': (1, 64, 64, 3),  # (1, 28, 28, 1)
         'batch_size': 64,
-        'epochs': 100,
+        'epochs': 50,
 
         'latent_dim': 20,
         'alpha': 1.0,
@@ -127,21 +128,12 @@ exp['decoder_layers'] = [
             activation='relu',
             data_format='channels_last'
         ),
-        layers.Flatten(),
-        layers.Dense(
-            units=exp['input_shape'][1] * 4,
-            activation='relu'
-        ),
     ]
 
     exp['decoder_layers'] = [
         layers.Dense(
-            units=exp['input_shape'][1] * 4,
-            activation='relu'
-        ),
-        layers.Dense(
             units=16384,
-            activation='relu'
+            activation='relu',
         ),
         layers.Reshape(target_shape=(8, 8, 256)),
         layers.Conv2DTranspose(
@@ -169,8 +161,10 @@ exp['decoder_layers'] = [
             data_format='channels_last'
         ),
     ]
+    return exp
 
-#  Architecture 4, The Big Boy Edition
+
+#  Architecture 4 - The Big Boy Edition
     exp = {
         'project_name': project_name,
         'dataset': 'stanford_dogs',  # 'mnist'
