@@ -46,7 +46,8 @@ def plot_digit_classes_in_latent_space(encoder, exp):
         cmap='viridis'
     )
     plt.colorbar()
-    plt.show()
+    plt.savefig(exp['project_name']+"/digits.png")
+    plt.close()
 
 
 def make_latent_grid(
@@ -193,7 +194,8 @@ def plot_2D_manifold_of_latent_variables(
         labelleft=False
     )
     plt.imshow(image_grid, cmap=cmap)
-    plt.show()
+    plt.savefig(exp['project_name']+"/latent/"+str(latent_indices[0])+"-"+str(latent_indices[1])+".png")
+    plt.close()
 
 
 def plot_all_2D_manifolds(decoder, exp):
@@ -237,7 +239,8 @@ def plot_losses(project_name, losses):
     df[loss_list].plot()
     plt.xlabel('Epochs')
     plt.title('Loss values per epoch')
-    plt.show()
+    plt.savefig(exp['project_name']+"/losses.png")
+    plt.close()
 
 
 if __name__ == '__main__':
@@ -252,6 +255,9 @@ if __name__ == '__main__':
         resume=True,
         checkpoint=args.checkpoint,
     )
+
+    if not os.path.exists(args.name+"/latent"):
+        os.makedirs(args.name+"/latent")
 
     # Use CTRL+C to quit early
     plot_losses(args.name, ['decomp', 'main'])
