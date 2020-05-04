@@ -90,14 +90,30 @@ def get_experiment(project_name, resume=False):
             activation='relu',
             data_format='channels_last'
         ),
+        layers.Conv2D(
+            filters=exp['input_shape'][1] * 6,
+            kernel_size=(3, 3),
+            strides=(2, 2),
+            padding='same',
+            activation='relu',
+            data_format='channels_last'
+        ),
     ]
 
     exp['decoder_layers'] = [
         layers.Dense(
-            units=16384,
+            units=6144,
             activation='relu',
         ),
-        layers.Reshape(target_shape=(8, 8, 256)),
+        layers.Reshape(target_shape=(4, 4, 384)),
+        layers.Conv2DTranspose(
+            filters=exp['input_shape'][1] * 4,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding='same',
+            activation='relu',
+            data_format='channels_last'
+        ),
         layers.Conv2DTranspose(
             filters=exp['input_shape'][1] * 2,
             kernel_size=(4, 4),
