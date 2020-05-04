@@ -45,10 +45,10 @@ def get_experiment(project_name, resume=False):
 
     exp = {
         'project_name': project_name,
-        'dataset': 'stanford_dogs',  # 'mnist'
+        'dataset': 'celeb_a',  # 'mnist'
         'input_shape': (1, 64, 64, 3),  # (1, 28, 28, 1)
         'batch_size': 64,
-        'epochs': 250,
+        'epochs': 1,
 
         'latent_dim': 100,
         'alpha': 1.0,
@@ -71,7 +71,8 @@ def get_experiment(project_name, resume=False):
             padding='same',
             input_shape=exp['input_shape'],
             activation='relu',
-            data_format='channels_last'
+            data_format='channels_last',
+            name="conv2d_enc_1"
         ),
         layers.Conv2D(
             filters=exp['input_shape'][1] * 2,
@@ -79,7 +80,8 @@ def get_experiment(project_name, resume=False):
             strides=(2, 2),
             padding='same',
             activation='relu',
-            data_format='channels_last'
+            data_format='channels_last',
+            name="conv2d_enc_2"
         ),
         layers.Conv2D(
             filters=exp['input_shape'][1] * 4,
@@ -87,23 +89,27 @@ def get_experiment(project_name, resume=False):
             strides=(2, 2),
             padding='same',
             activation='relu',
-            data_format='channels_last'
+            data_format='channels_last',
+            name="conv2d_enc_3"
         ),
         layers.Flatten(),
         layers.Dense(
             units=exp['input_shape'][1] * 4,
-            activation='relu'
+            activation='relu',
+            name="dense_enc_1"
         ),
     ]
 
     exp['decoder_layers'] = [
         layers.Dense(
             units=exp['input_shape'][1] * 4,
-            activation='relu'
+            activation='relu',
+            name="dense_dec_1"
         ),
         layers.Dense(
             units=16384,
-            activation='relu'
+            activation='relu',
+            name="dense_dec_2"
         ),
         layers.Reshape(target_shape=(8, 8, 256)),
         layers.Conv2DTranspose(
@@ -112,7 +118,8 @@ def get_experiment(project_name, resume=False):
             strides=(2, 2),
             padding='same',
             activation='relu',
-            data_format='channels_last'
+            data_format='channels_last',
+            name="deconv2d_dec_1"
         ),
         layers.Conv2DTranspose(
             filters=exp['input_shape'][1],
@@ -120,7 +127,8 @@ def get_experiment(project_name, resume=False):
             strides=(2, 2),
             padding='same',
             activation='relu',
-            data_format='channels_last'
+            data_format='channels_last',
+            name="deconv2d_dec_2"
         ),
         layers.Conv2DTranspose(
             filters=exp['channels'],
@@ -128,7 +136,8 @@ def get_experiment(project_name, resume=False):
             strides=(2, 2),
             padding='same',
             activation='relu',
-            data_format='channels_last'
+            data_format='channels_last',
+            name="deconv2d_dec_3"
         ),
     ]
     return exp

@@ -25,6 +25,17 @@ def preprocessing(data, im_shape, labels=False):
         return image, image
 
 
+def read_image(path):
+    image = tf.io.read_file(path)
+    image = tf.image.decode_jpeg(image, channels=3)
+
+    data = {
+        'image': image
+    }
+
+    return data
+
+
 def crop_dogs(data):
     """Use the bounding box annotations to crop the dogs from the images."""
     print("Cropping dogs...")
@@ -59,27 +70,39 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
     """Load the Stanford Dogs dataset from TensorFlow and return it."""
     preprocess = partial(preprocessing, im_shape=im_shape, labels=labels)
 
-    train_data, info = tfds.load(
-        name=dataset,
-        split="train",
-        with_info=True,
-    )
+    if (dataset == "celeb_a"):
+        celeb_a = tf.data.Dataset.list_files(str('/home/hidde/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/*'))
+        celeb_a = celeb_a.map(read_image, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        test_data = celeb_a.take(20000)
+        train_data = celeb_a.skip(20000)
+        steps_per_epoch = int(tf.math.ceil(182599 / batch_size))
+        validation_steps = int(tf.math.ceil(20000 / batch_size))
 
-    test_data = tfds.load(
-        name=dataset,
-        split="test",
-    )
+    elif (dataset == "chairs"):
+        pass
 
-    info.steps_per_epoch = int(tf.math.ceil(
-            info.splits["train"].num_examples / batch_size
-    ))
-    info.validation_steps = int(tf.math.ceil(
-            info.splits["test"].num_examples / batch_size
-    ))
+    else:
+        train_data, info = tfds.load(
+            name=dataset,
+            split="train",
+            with_info=True,
+        )
 
-    if dataset == 'stanford_dogs':
-        crop_dogs(train_data)
-        crop_dogs(test_data)
+        test_data = tfds.load(
+            name=dataset,
+            split="test",
+        )
+
+        steps_per_epoch = int(tf.math.ceil(
+                info.splits["train"].num_examples / batch_size
+        ))
+        validation_steps = int(tf.math.ceil(
+                info.splits["test"].num_examples / batch_size
+        ))
+
+    # if dataset == 'stanford_dogs':
+        # crop_dogs(train_data)
+        # crop_dogs(test_data)
 
     train = (
         train_data
@@ -100,4 +123,4 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
         .prefetch(5)
     )
 
-    return train, test, info
+    return train, test, steps_per_epoch, validation_steps

@@ -27,7 +27,7 @@ vae, exp = get_model(
 )
 
 # Load and preprocess the data
-train, test, info = get_data(
+train, test, steps_per_epoch, validation_steps = get_data(
     batch_size=exp['batch_size'],
     im_shape=exp['im_shape'],
     dataset=exp['dataset'],
@@ -37,9 +37,9 @@ train, test, info = get_data(
 vae.fit(
     train,
     epochs=exp['epochs'],
-    steps_per_epoch=info.steps_per_epoch,
+    steps_per_epoch=steps_per_epoch,
     validation_data=test,
-    validation_steps=info.validation_steps,
+    validation_steps=validation_steps,
     callbacks=[
         # Log validation losses
         tf.keras.callbacks.CSVLogger(
