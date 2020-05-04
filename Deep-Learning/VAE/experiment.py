@@ -67,34 +67,34 @@ def get_experiment(project_name, resume=False):
     exp['encoder_layers'] = [
         layers.Flatten(),
         layers.Dense(
-            units=int(6144 * 0.75),
+            units=int(3072 * 0.75),
             activation='relu',
         ),
         layers.Dense(
-            units=int(6144 * 0.5),
+            units=int(3072 * 0.5),
             activation='relu',
         ),
         layers.Dense(
-            units=int(6144 * 0.25),
+            units=int(3072 * 0.25),
             activation='relu',
         ),
     ]
 
     exp['decoder_layers'] = [
         layers.Dense(
-            units=int(6144 * 0.25),
+            units=int(3072 * 0.25),
             activation='relu',
         ),
         layers.Dense(
-            units=int(6144 * 0.5),
+            units=int(3072 * 0.5),
             activation='relu',
         ),
         layers.Dense(
-            units=int(6144 * 0.75),
+            units=int(3072 * 0.75),
             activation='relu',
         ),
         layers.Dense(
-            units=int(6144),
+            units=int(3072),
             activation='relu',
         ),
         layers.Reshape(target_shape=exp['input_shape'][1:]),
