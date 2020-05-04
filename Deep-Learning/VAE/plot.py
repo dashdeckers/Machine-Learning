@@ -142,7 +142,7 @@ def plot_2D_manifold_of_latent_variables(
 
     Then, we get an image prediction for each point in the grid and plot them.
     """
-    latent_dim = exp['latent_dim']
+    latent_dim = exp['latent_dim'] / 4
     channels = exp['channels']
     im_shape = exp['im_shape']
 
@@ -256,5 +256,5 @@ if __name__ == '__main__':
     # Use CTRL+C to quit early
     plot_losses(args.name, ['decomp', 'main'])
     plot_digit_classes_in_latent_space(vae.encoder, exp)
-    # plot_independent_grid(vae.decoder, exp)
-    plot_all_2D_manifolds(vae.decoder, exp)
+    plot_independent_grid(vae.decoder, exp)
+    # plot_all_2D_manifolds(vae.decoder, exp)
