@@ -82,21 +82,29 @@ def get_experiment(project_name, resume=False):
             activation='relu',
             data_format='channels_last'
         ),
+        layers.Conv2D(
+            filters=exp['input_shape'][1] * 4,
+            kernel_size=(3, 3),
+            strides=(2, 2),
+            padding='same',
+            activation='relu',
+            data_format='channels_last'
+        ),
         layers.Flatten(),
         layers.Dense(
-            units=32768 / 2,
+            units=16384 / 2,
             activation='relu'
         ),
         layers.Dense(
-            units=32768 / 4,
+            units=16384 / 4,
             activation='relu'
         ),
         layers.Dense(
-            units=32768 / 8,
+            units=16384 / 8,
             activation='relu'
         ),
         layers.Dense(
-            units=32768 / 16,
+            units=16384 / 16,
             activation='relu'
         ),
         layers.Dense(
@@ -111,28 +119,36 @@ def get_experiment(project_name, resume=False):
             activation='relu'
         ),
         layers.Dense(
-            units=32768 / 16,
+            units=16384 / 16,
             activation='relu'
         ),
         layers.Dense(
-            units=32768 / 8,
+            units=16384 / 8,
             activation='relu'
         ),
         layers.Dense(
-            units=32768 / 4,
+            units=16384 / 4,
             activation='relu'
         ),
         layers.Dense(
-            units=32768 / 2,
+            units=16384 / 2,
             activation='relu'
         ),
         layers.Dense(
-            units=32768,
+            units=16384,
             activation='relu'
         ),
-        layers.Reshape(target_shape=(16, 16, 128)),
+        layers.Reshape(target_shape=(8, 8, 256)),
         layers.Conv2DTranspose(
             filters=exp['input_shape'][1] * 2,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding='same',
+            activation='relu',
+            data_format='channels_last'
+        ),
+        layers.Conv2DTranspose(
+            filters=exp['input_shape'][1],
             kernel_size=(4, 4),
             strides=(2, 2),
             padding='same',
