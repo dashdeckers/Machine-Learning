@@ -15,6 +15,7 @@ parser.add_argument('--resume', default=False, action='store_true')
 parser.add_argument('--checkpoint', default='newest')
 parser.add_argument('--beta', default=1.0, type=float)
 parser.add_argument('--tc', default=False, type=bool)
+parser.add_argument('--dataset', default='stanford_dogs', type=str)
 parser.add_argument('name', type=str)
 args = parser.parse_args()
 
@@ -27,7 +28,8 @@ vae, exp = get_model(
     resume=args.resume,
     checkpoint=args.checkpoint,
     beta=args.beta,
-    tc=args.tc
+    tc=args.tc,
+    dataset=args.dataset
 )
 
 # Load and preprocess the data

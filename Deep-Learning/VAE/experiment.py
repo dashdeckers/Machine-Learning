@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 
-def get_experiment(project_name, beta, tc, resume=False):
+def get_experiment(project_name, beta, tc, dataset, resume=False):
     """Define the experiment here!.
 
     Everything about the VAE that can be changed is defined here. You can
@@ -55,7 +55,7 @@ def get_experiment(project_name, beta, tc, resume=False):
 
     exp = {
         'project_name': project_name,
-        'dataset': 'celeb_a',  # 'mnist'
+        'dataset': dataset,  # 'mnist'
         'input_shape': (1, 64, 64, 3),  # (1, 28, 28, 1)
         'batch_size': 64,
         'epochs': 50,
