@@ -44,7 +44,7 @@ def get_experiment(project_name, resume=False):
         return exp
 
     # Define the experiment
-exp = {
+    exp = {
         'project_name': project_name,
         'dataset': 'stanford_dogs',  # 'mnist'
         'input_shape': (1, 64, 64, 3),  # (1, 28, 28, 1)
