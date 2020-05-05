@@ -53,7 +53,7 @@ def get_experiment(project_name, resume=False):
 
         'latent_dim': 20,
         'alpha': 1.0,
-        'beta': 1.0,
+        'beta': 3.0,
         'gamma': 1.0,
         'distribution': 'gaussian',
 
