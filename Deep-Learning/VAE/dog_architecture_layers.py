@@ -161,7 +161,6 @@ exp['decoder_layers'] = [
             data_format='channels_last'
         ),
     ]
-    return exp
 
 
 #  Architecture 4 - The Big Boy Edition
@@ -268,4 +267,61 @@ exp['decoder_layers'] = [
             activation='relu',
             data_format='channels_last'
         ),
+    ]
+
+#  Arch 5 - Dense only
+    exp = {
+        'project_name': project_name,
+        'dataset': 'stanford_dogs',  # 'mnist'
+        'input_shape': (1, 32, 32, 3),  # (1, 28, 28, 1)
+        'batch_size': 64,
+        'epochs': 50,
+
+        'latent_dim': 120,
+        'alpha': 1.0,
+        'beta': 1.0,
+        'gamma': 1.0,
+        'distribution': 'gaussian',
+
+        'optimizer': tf.keras.optimizers.Adam(),
+    }
+    exp['im_shape'] = exp['input_shape'][1:3]
+    exp['channels'] = exp['input_shape'][3]
+    exp['col_dim'] = int(np.prod(exp['input_shape'][1:]))
+
+    # Define the architecture
+    exp['encoder_layers'] = [
+        layers.Flatten(),
+        layers.Dense(
+            units=int(3072 * 0.75),
+            activation='relu',
+        ),
+        layers.Dense(
+            units=int(3072 * 0.5),
+            activation='relu',
+        ),
+        layers.Dense(
+            units=int(3072 * 0.25),
+            activation='relu',
+        ),
+    ]
+
+    exp['decoder_layers'] = [
+        layers.Dense(
+            units=int(3072 * 0.25),
+            activation='relu',
+        ),
+        layers.Dense(
+            units=int(3072 * 0.5),
+            activation='relu',
+        ),
+        layers.Dense(
+            units=int(3072 * 0.75),
+            activation='relu',
+        ),
+        layers.Dense(
+            units=int(3072),
+            activation='relu',
+        ),
+        layers.Reshape(target_shape=exp['input_shape'][1:]),
     ]
