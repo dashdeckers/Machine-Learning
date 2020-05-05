@@ -236,7 +236,13 @@ def plot_losses(project_name, losses):
 
     df[loss_list].plot()
     plt.xlabel('Epochs')
-    plt.title('Loss values per epoch')
+    if 'val_decomp' in losses:
+        plt.title('Validation loss values per epoch')
+        plt.legend(loc='upper right', bbox_to_anchor=(1.35, 0.73))
+    if 'decomp' in losses:
+        plt.title('Loss values per epoch')
+        plt.legend(loc='upper right')
+
     plt.show()
 
 
@@ -254,7 +260,8 @@ if __name__ == '__main__':
     )
 
     # Use CTRL+C to quit early
+    # plot_losses(args.name, ['val_decomp', 'val_main'])
     plot_losses(args.name, ['decomp', 'main'])
-    plot_digit_classes_in_latent_space(vae.encoder, exp)
-    plot_independent_grid(vae.decoder, exp)
+    # plot_digit_classes_in_latent_space(vae.encoder, exp)
+    # plot_independent_grid(vae.decoder, exp)
     # plot_all_2D_manifolds(vae.decoder, exp)
