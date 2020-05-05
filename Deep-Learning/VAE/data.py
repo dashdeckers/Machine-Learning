@@ -71,15 +71,20 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
     preprocess = partial(preprocessing, im_shape=im_shape, labels=labels)
 
     if (dataset == "celeb_a"):
-        celeb_a = tf.data.Dataset.list_files(str('/home/hidde/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/*'))
+        celeb_a = tf.data.Dataset.list_files(str('/data/s2759799/img_align_celeba/img_align_celeba/*'))
         celeb_a = celeb_a.map(read_image, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        test_data = celeb_a.take(20000)
-        train_data = celeb_a.skip(20000)
-        steps_per_epoch = int(tf.math.ceil(182599 / batch_size))
-        validation_steps = int(tf.math.ceil(20000 / batch_size))
+        test_data = celeb_a.take(8000)
+        train_data = celeb_a.skip(8000).take(40000)
+        steps_per_epoch = int(tf.math.ceil(40000 / batch_size))
+        validation_steps = int(tf.math.ceil(8000 / batch_size))
 
     elif (dataset == "chairs"):
-        pass
+        chairs = tf.data.Dataset.list_files(str('/data/s2759799/rendered_chairs/*.png*'))
+        chairs = chairs.map(read_image, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        test_data = chairs.take(8000)
+        train_data = chairs.skip(8000).take(40000)
+        steps_per_epoch = int(tf.math.ceil(40000 / batch_size))
+        validation_steps = int(tf.math.ceil(8000 / batch_size))
 
     else:
         train_data, info = tfds.load(
