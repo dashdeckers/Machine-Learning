@@ -52,9 +52,9 @@ def get_experiment(project_name, resume=False):
         'epochs': 50,
 
         'latent_dim': 20,
-        'alpha': 1.0,
-        'beta': 1.0,
-        'gamma': 1.0,
+        'alpha': 6.0,
+        'beta': 6.0,
+        'gamma': 6.0,
         'distribution': 'gaussian',
 
         'optimizer': tf.keras.optimizers.Adam(),
