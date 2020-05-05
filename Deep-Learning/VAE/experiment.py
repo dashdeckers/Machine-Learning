@@ -6,12 +6,19 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 
-def get_experiment(project_name, resume=False):
+def get_experiment(project_name, beta, tc, resume=False):
     """Define the experiment here!.
 
     Everything about the VAE that can be changed is defined here. You can
     play with all the parameters you want from the exp dictionary.
     """
+    if not tc:
+        alpha = beta
+        gamma = beta
+    else:
+        alpha = 1.0
+        gamma = 1.0
+
     if resume:
         funcs = {
             'dense': layers.Dense,
@@ -54,9 +61,9 @@ def get_experiment(project_name, resume=False):
         'epochs': 50,
 
         'latent_dim': 20,
-        'alpha': 1.0,
-        'beta': 1.0,
-        'gamma': 1.0,
+        'alpha': alpha,
+        'beta': beta,
+        'gamma': gamma,
         'distribution': 'gaussian',
 
         'optimizer': tf.keras.optimizers.Adam(),

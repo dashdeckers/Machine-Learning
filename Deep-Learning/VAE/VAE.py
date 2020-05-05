@@ -13,6 +13,8 @@ checkpoint_format = 'checkpoint.h5'
 parser = argparse.ArgumentParser(description='VAE')
 parser.add_argument('--resume', default=False, action='store_true')
 parser.add_argument('--checkpoint', default='newest')
+parser.add_argument('--beta', default=1.0, type=float)
+parser.add_argument('--tc', default=False, type=bool)
 parser.add_argument('name', type=str)
 args = parser.parse_args()
 
@@ -24,6 +26,8 @@ vae, exp = get_model(
     project_name=args.name,
     resume=args.resume,
     checkpoint=args.checkpoint,
+    beta=args.beta,
+    tc=args.tc
 )
 
 # Load and preprocess the data
