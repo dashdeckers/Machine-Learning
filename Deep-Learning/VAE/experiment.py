@@ -46,7 +46,7 @@ def get_experiment(project_name, resume=False):
     # Define the experiment
     exp = {
         'project_name': project_name,
-        'dataset': 'stanford_dogs',  # 'mnist'
+        'dataset': 'mnist',  # 'stanford_dogs'
         'input_shape': (1, 64, 64, 3),  # (1, 28, 28, 1)
         'batch_size': 64,
         'epochs': 50,
