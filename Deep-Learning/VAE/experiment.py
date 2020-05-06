@@ -47,13 +47,13 @@ def get_experiment(project_name, resume=False):
     exp = {
         'project_name': project_name,
         'dataset': 'mnist',  # 'stanford_dogs'
-        'input_shape': (1, 64, 64, 3),  # (1, 28, 28, 1)
+        'input_shape': (1, 64, 64, 1),  # (1, 28, 28, 1)
         'batch_size': 64,
         'epochs': 50,
 
-        'latent_dim': 20,
+        'latent_dim': 2,
         'alpha': 1.0,
-        'beta': 6.0,
+        'beta': 1.0,
         'gamma': 1.0,
         'distribution': 'gaussian',
 
