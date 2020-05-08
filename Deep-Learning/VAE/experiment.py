@@ -60,7 +60,7 @@ def get_experiment(project_name, beta, tc, dataset, resume=False):
         'batch_size': 64,
         'epochs': 50,
 
-        'latent_dim': 20,
+        'latent_dim': 40,
         'alpha': alpha,
         'beta': beta,
         'gamma': gamma,
