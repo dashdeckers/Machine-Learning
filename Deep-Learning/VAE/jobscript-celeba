@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH --job-name=celeba
+#SBATCH --time=04:00:00
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+#SBATCH --mem=64000
+
+module load TensorFlow 
+pip install --user tensorflow-datasets
+
+srun python VAE.py celeba_bvae_1 --beta 1.0 --tc False --dataset celeb_a
+srun python VAE.py celeba_bvae_3 --beta 3.0 --tc False --dataset celeb_a
+srun python VAE.py celeba_bvae_6 --beta 6.0 --tc False --dataset celeb_a
+srun python VAE.py celeba_bvae_10 --beta 10.0 --tc False --dataset celeb_a
+
+srun python VAE.py celeba_btcvae_3 --beta 3.0 --tc True --dataset celeb_a
+srun python VAE.py celeba_btcvae_6 --beta 6.0 --tc True --dataset celeb_a
+srun python VAE.py celeba_btcvae_10 --beta 10.0 --tc True --dataset celeb_a
