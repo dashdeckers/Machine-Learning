@@ -7,12 +7,15 @@ from data import get_data
 from model import get_model, gpu_configuration
 
 tf.keras.backend.set_floatx('float64')
-checkpoint_format = 'e{epoch:02d}-l{val_loss:.2f}.h5'
+checkpoint_format = 'checkpoint.h5'
 
 # Parse arguments. Require the user to provide a project/run name
 parser = argparse.ArgumentParser(description='VAE')
 parser.add_argument('--resume', default=False, action='store_true')
 parser.add_argument('--checkpoint', default='newest')
+parser.add_argument('--beta', default=1.0, type=float)
+parser.add_argument('--tc', default=False, type=bool)
+parser.add_argument('--dataset', default='stanford_dogs', type=str)
 parser.add_argument('name', type=str)
 args = parser.parse_args()
 
@@ -24,10 +27,13 @@ vae, exp = get_model(
     project_name=args.name,
     resume=args.resume,
     checkpoint=args.checkpoint,
+    beta=args.beta,
+    tc=args.tc,
+    dataset=args.dataset
 )
 
 # Load and preprocess the data
-train, test, info = get_data(
+train, test, steps_per_epoch, validation_steps = get_data(
     batch_size=exp['batch_size'],
     im_shape=exp['im_shape'],
     dataset=exp['dataset'],
@@ -37,9 +43,9 @@ train, test, info = get_data(
 vae.fit(
     train,
     epochs=exp['epochs'],
-    steps_per_epoch=info.steps_per_epoch,
+    steps_per_epoch=steps_per_epoch,
     validation_data=test,
-    validation_steps=info.validation_steps,
+    validation_steps=validation_steps,
     callbacks=[
         # Log validation losses
         tf.keras.callbacks.CSVLogger(
@@ -50,7 +56,7 @@ vae.fit(
         tf.keras.callbacks.ModelCheckpoint(
             filepath=os.path.join(args.name, checkpoint_format),
             save_weights_only=True,
-            save_best_only=False,
+            save_best_only=True,
             monitor='val_loss',
             save_freq='epoch',
             verbose=1,

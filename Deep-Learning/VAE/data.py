@@ -25,6 +25,17 @@ def preprocessing(data, im_shape, labels=False):
         return image, image
 
 
+def read_image(path):
+    image = tf.io.read_file(path)
+    image = tf.image.decode_jpeg(image, channels=3)
+
+    data = {
+        'image': image
+    }
+
+    return data
+
+
 def crop_dogs(data):
     """Use the bounding box annotations to crop the dogs from the images."""
     print("Cropping dogs...")
@@ -59,23 +70,47 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
     """Load the Stanford Dogs dataset from TensorFlow and return it."""
     preprocess = partial(preprocessing, im_shape=im_shape, labels=labels)
 
-    train_data, info = tfds.load(
-        name=dataset,
-        split="train",
-        with_info=True,
-    )
+    if (dataset == "celeb_a"):
+        # celeba is in TFDS, but frequently this throws errors due to it being hosted on Google Drive
+        # it can be downloaded from https://www.kaggle.com/jessicali9530/celeba-dataset/data
+        # change the path to your local copy of celeba
+        celeb_a = tf.data.Dataset.list_files(str('/data/s2759799/img_align_celeba/img_align_celeba/*'))
+        celeb_a = celeb_a.map(read_image, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        test_data = celeb_a.take(8000) # use 8000 test samples
+        train_data = celeb_a.skip(8000).take(40000) # use 40000 training samples
+        steps_per_epoch = int(tf.math.ceil(40000 / batch_size))
+        validation_steps = int(tf.math.ceil(8000 / batch_size))
 
-    test_data = tfds.load(
-        name=dataset,
-        split="test",
-    )
+    elif (dataset == "chairs"):
+        # the chairs dataset is not in TFDS
+        # it can be downloaded from https://www.di.ens.fr/willow/research/seeing3Dchairs/
+        # change the path to your local copy of the chairs dataset
+        # make sure to move all the images to the root folder
+        chairs = tf.data.Dataset.list_files(str('/data/s2759799/rendered_chairs/*.png*'))
+        chairs = chairs.map(read_image, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        test_data = chairs.take(8000) # use 8000 test samples
+        train_data = chairs.skip(8000).take(40000) # use 40000 training samples
+        steps_per_epoch = int(tf.math.ceil(40000 / batch_size))
+        validation_steps = int(tf.math.ceil(8000 / batch_size))
 
-    info.steps_per_epoch = int(tf.math.ceil(
-            info.splits["train"].num_examples / batch_size
-    ))
-    info.validation_steps = int(tf.math.ceil(
-            info.splits["test"].num_examples / batch_size
-    ))
+    else:
+        train_data, info = tfds.load(
+            name=dataset,
+            split="train",
+            with_info=True,
+        )
+
+        test_data = tfds.load(
+            name=dataset,
+            split="test",
+        )
+
+        steps_per_epoch = int(tf.math.ceil(
+                info.splits["train"].num_examples / batch_size
+        ))
+        validation_steps = int(tf.math.ceil(
+                info.splits["test"].num_examples / batch_size
+        ))
 
     if dataset == 'stanford_dogs':
         crop_dogs(train_data)
@@ -100,4 +135,4 @@ def get_data(batch_size, im_shape, labels=False, dataset='stanford_dogs'):
         .prefetch(5)
     )
 
-    return train, test, info
+    return train, test, steps_per_epoch, validation_steps

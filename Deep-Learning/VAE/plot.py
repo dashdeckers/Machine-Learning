@@ -46,7 +46,8 @@ def plot_digit_classes_in_latent_space(encoder, exp):
         cmap='viridis'
     )
     plt.colorbar()
-    plt.show()
+    plt.savefig(exp['project_name']+"/digits.png")
+    plt.close()
 
 
 def make_latent_grid(
@@ -181,7 +182,9 @@ def plot_2D_manifold_of_latent_variables(
         cmap = 'viridis'
 
     # Plot the manifold
-    plt.figure(figsize=(10, 10))
+    # This figsize forces matplotlib to make a 2560x960 image,
+    # which we need to plot 40 latent variables with 64x64 images
+    plt.figure(figsize=(12.471, 33.24676))
     plt.tick_params(
         axis='both',
         which='both',
@@ -193,7 +196,8 @@ def plot_2D_manifold_of_latent_variables(
         labelleft=False
     )
     plt.imshow(image_grid, cmap=cmap)
-    plt.show()
+    plt.savefig(exp['project_name']+"/latent.png", bbox_inches='tight', pad_inches=0)
+    plt.close()
 
 
 def plot_all_2D_manifolds(decoder, exp):
@@ -237,7 +241,8 @@ def plot_losses(project_name, losses):
     df[loss_list].plot()
     plt.xlabel('Epochs')
     plt.title('Loss values per epoch')
-    plt.show()
+    plt.savefig(exp['project_name']+"/losses.png")
+    plt.close()
 
 
 if __name__ == '__main__':
@@ -247,15 +252,18 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Load the model (exp must have the same architecture as the saved model)
+    # (beta and dataset arguments are irrelevant here since we don't create a new model)
     vae, exp = get_model(
         project_name=args.name,
         resume=True,
         checkpoint=args.checkpoint,
+        beta=1.0,
+        dataset='stanford_dogs',
+        tc=False
     )
 
     # Use CTRL+C to quit early
     plot_losses(args.name, ['decomp', 'main'])
-    plot_losses(args.name, ['val_decomp', 'val_main'])
-    plot_digit_classes_in_latent_space(vae.encoder, exp)
-    # plot_independent_grid(vae.decoder, exp)
-    plot_all_2D_manifolds(vae.decoder, exp)
+    # plot_digit_classes_in_latent_space(vae.encoder, exp)
+    plot_independent_grid(vae.decoder, exp)
+    # plot_all_2D_manifolds(vae.decoder, exp)

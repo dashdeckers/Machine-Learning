@@ -28,9 +28,9 @@ def create_project_safely(name, exp):
             )
 
 
-def get_model(project_name, resume, checkpoint='newest'):
+def get_model(project_name, resume, beta, tc, dataset, checkpoint='newest'):
     """Create and retrieve a VAE model, and load saved weights if needed."""
-    exp = get_experiment(project_name, resume)
+    exp = get_experiment(project_name, beta, tc, dataset, resume)
     create_project_safely(project_name, exp)
 
     vae = VariationalAutoEncoder(exp)
