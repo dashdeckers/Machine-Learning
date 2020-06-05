@@ -1,3 +1,5 @@
+import random
+import string
 import numpy as np
 import torch
 import torch.nn as nn
@@ -50,10 +52,11 @@ def corrupt_batch(batch, chance=0.1):
     # just sets some char to 'z' right now
     def corrupt(sequence, chance=chance):
         if np.random.random() < chance:
-            mid_idx = int(np.ceil(len(sequence) / 2))
-            new_seq = list(sequence)
-            new_seq[mid_idx] = 'z'
-            return ''.join(new_seq)
+            mid = int(np.ceil(len(sequence) / 2))
+
+            return (sequence[:mid-1]
+                    + random.sample(string.ascii_lowercase, 1)[0]
+                    + sequence[mid+1:])
         else:
             return sequence
 
@@ -112,6 +115,11 @@ train_iter, test_iter = dataset.iters(1)
 words = list()
 [words.extend(item.text) for item in train_iter.data()]
 text = ' '.join(words)
+# preprocess: filter(c.isalpha() or c == ' ')
+# preprocess: lowercase
+
+int2char = dict(enumerate(string.ascii_lowercase + ' '))
+char2int = {ch: ii for ii, ch in int2char.items()}
 
 
 print('\n', '*' * 5, f'Training the model', '*' * 5)
