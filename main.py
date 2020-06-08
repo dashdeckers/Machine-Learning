@@ -1,5 +1,6 @@
 import random
 import string
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -63,19 +64,17 @@ def corrupt_batch(batch, chance=0.1):
     return list(map(corrupt, batch))
 
 
-def one_hot_encode(text):
-    # Needs to be known beforehand: Set of all chars
-    chars = tuple(set(text))
-
-    # Encoder / Decoder, int / char
-    int2char = dict(enumerate(chars))
-    char2int = {ch: ii for ii, ch in int2char.items()}
-
-    # Numpy one-hot
-    encoded = np.array([char2int[char] for char in text])
-    one_hot = np.zeros((len(encoded), len(chars)))
-    one_hot[np.arange(len(encoded)), encoded] = 1
-    return one_hot
+def one_hot_code(input):
+    if(isinstance(input, str)):
+        # Numpy one-hot
+        encoded = np.array([char2int[char] for char in input])
+        one_hot = np.zeros((len(encoded), len(int2char)))
+        one_hot[np.arange(len(encoded)), encoded] = 1
+        return one_hot
+    else:
+        values = np.argmax(input, axis=1)
+        decoded = [int2char[i] for i in values]
+        return "".join(decoded)
 
 
 def batch_to_tensor(batch):
