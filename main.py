@@ -65,6 +65,7 @@ def corrupt_batch(batch, chance=0.1):
 
 
 def one_hot_code(input):
+    # Toggle input between one-hot encoded version and string version
     if(isinstance(input, str)):
         # Numpy one-hot
         encoded = np.array([char2int[char] for char in input])
@@ -72,6 +73,7 @@ def one_hot_code(input):
         one_hot[np.arange(len(encoded)), encoded] = 1
         return one_hot
     else:
+        # Take max value and translate it into char
         values = np.argmax(input, axis=1)
         decoded = [int2char[i] for i in values]
         return "".join(decoded)
