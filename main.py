@@ -4,6 +4,7 @@ import string
 import numpy as np
 import torch
 import torch.nn as nn
+import unidecode
 from torchtext.datasets import IMDB as dataset
 
 
@@ -17,7 +18,6 @@ class CharDenoiser(nn.Module):
         self.input_size = input_size
 
 
-        ##TODO: We probably don't need half of these float()s here
         # LSTM:
         # Input shape = (batch, seq_len, inp_size)
         # Output shape = (batch, seq_len, num_directions * hidden_size)
@@ -28,27 +28,29 @@ class CharDenoiser(nn.Module):
             num_layers=num_layers,
             batch_first=True,
             bidirectional=True,
-        ).float()
+        )
         self.linear = nn.Linear(
             # x2 because bidirectional, same for hidden layer
             in_features=seq_length * hidden_size * 2,
             out_features=input_size
-        ).float()
-        self.hidden = (
-            torch.zeros(num_layers * 2, batch_size, hidden_size).float(),
-            torch.zeros(num_layers * 2, batch_size, hidden_size).float()
         )
-        self.softmax = nn.Softmax(dim=1).float()
+        self.hidden = (
+            torch.zeros(num_layers * 2, batch_size, hidden_size),
+            torch.zeros(num_layers * 2, batch_size, hidden_size)
+        )
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, batch):
-        lstm_output, self.hidden = self.lstm(
-            batch.view(self.batch_size, self.seq_length, self.input_size).float(),
-            self.hidden
+        lstm_output, _ = self.lstm(
+            batch.view(self.batch_size, self.seq_length, self.input_size)
+            .float()#,
+            #self.hidden
         )
         prediction = self.linear(
-            lstm_output.contiguous().view(self.batch_size, self.input_size)
+            lstm_output.contiguous()
+            .view(self.batch_size, self.seq_length * self.hidden_size * 2,)
         )
-        return self.softmax(prediction).argmax()
+        return self.softmax(prediction)#.argmax()
 
 
 def corrupt_batch(batch, chance=0.1):
@@ -80,8 +82,12 @@ def one_hot_code(input):
         return "".join(decoded)
 
 
-def batch_to_tensor(batch):
-    ohc = [one_hot_code(entry) for entry in batch]
+def batch_to_tensor(batch, as_input=True):
+    if as_input:
+        ohc = [one_hot_code(entry) for entry in batch]
+    else:
+        mid = int(np.ceil(seq_length / 2))
+        ohc = [one_hot_code(entry[mid]) for entry in batch]
     return torch.as_tensor(np.vstack(ohc))
 
 
@@ -92,11 +98,11 @@ def tensor_to_batch(tensor):
 print('\n', '*' * 5, f'Defining the model', '*' * 5)
 
 num_epochs = 1
-batch_size = 32
+batch_size = 2048
 seq_length = 11
 input_size = 27
 
-num_layers = 1
+num_layers = 2
 hidden_size = 10
 
 model = CharDenoiser(
@@ -118,7 +124,7 @@ train_iter, test_iter = dataset.iters(1)
 words = list()
 [words.extend(item.text) for item in train_iter.data()]
 text = ''.join([c for c in words if c.isalpha() or c == ' '])
-text = text.lower()
+text = unidecode.unidecode(text.lower())
 
 int2char = dict(enumerate(string.ascii_lowercase + ' '))
 char2int = {ch: ii for ii, ch in int2char.items()}
@@ -129,33 +135,42 @@ print('\n', '*' * 5, f'Training the model', '*' * 5)
 # Like a sliding window, get seq_length chars one char at a time
 sequences = [text[i: i + seq_length] for i in
              range(len(text) - seq_length)]
+print(len(sequences))
 for sequence in sequences:
     if len(sequence) != seq_length:
         print(len(sequence))
         print(sequence)
 
+sequences = sequences[:10000*batch_size]
 for epoch in range(num_epochs):
     print('\n', '*' * 5, f'Epoch {epoch}', '*' * 5)
 
+    batch_n=0
     # Cut sequences into batches
     for batch in [sequences[i: i+batch_size] for i in
                   range(0, len(sequences), batch_size)]:
-        if len(batch) != batch_size:
-            print(len(batch))
-        for sequence in batch:
-            if len(sequence) != seq_length:
-                print(len(sequence))
-
+        batch_n += 1
         # Corrupt a batch
         corrupted = corrupt_batch(batch)
-        print(np.shape(corrupted))
         # Try reconstructing it
         reconstructed = model(batch_to_tensor(corrupted))
 
         # Compare
-        loss = criterion(tensor_to_batch(reconstructed), batch)
+        loss = criterion(reconstructed, torch.argmax(
+            batch_to_tensor(batch, as_input=False), dim=1))
 
         # Backprop
-        loss.backward()
+        loss.backward(retain_graph=True)
         optimizer.step()
         model.zero_grad()
+
+        guesses = torch.eq(torch.argmax(reconstructed, dim=1))
+        real_answers = torch.argmax(batch_to_tensor(batch, as_input=False),
+                                    dim=1)
+        corrects = sum(guesses, real_answers).item()
+        acc = corrects / batch_size
+
+        if(batch_n % 10 == 0):
+            print("Batch " + str(batch_n))
+            print('[%d, %d] loss: %.3f, test_acc: %.3f' %
+                  (batch_n, epoch, loss.item(), acc))
