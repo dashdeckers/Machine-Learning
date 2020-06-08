@@ -4,8 +4,9 @@ import string
 import numpy as np
 import torch
 import torch.nn as nn
-import unidecode
-from torchtext.datasets import IMDB as dataset
+# from torchtext.datasets import IMDB as dataset
+from torchtext.datasets import WikiText2 as dataset
+from unidecode import unidecode
 
 
 # The model
@@ -16,7 +17,6 @@ class CharDenoiser(nn.Module):
         self.batch_size = batch_size
         self.seq_length = seq_length
         self.input_size = input_size
-
 
         # LSTM:
         # Input shape = (batch, seq_len, inp_size)
@@ -95,13 +95,87 @@ def tensor_to_batch(tensor):
     return one_hot_code(tensor.numpy())
 
 
+def iters2seqs(iters):
+    seq_sets = []
+    for iter in iters:
+        words = list()
+        [words.extend(item.text) for item in iter.data()]
+        text = ''.join([unidecode(c) for c in words
+                        if unidecode(c).isalpha() or unidecode(c) == ' '])
+        text = text.lower()
+        # Like a sliding window, get seq_length chars one char at a time
+        sequences = [text[i: i + seq_length] for i in
+                     range(len(text) - seq_length)]
+        max_batches = int(len(sequences)/batch_size)
+        sequences = sequences[:max_batches*batch_size]
+        seq_sets.append(sequences)
+    return seq_sets
+
+
+def train_test(sequences, train=True, epoch=0, max_n_batches=-1):
+    if train:
+        batch_n = 0
+        # Cut sequences into batches
+        for batch in [train_sequences[i: i+batch_size] for i in
+                      range(0, len(train_sequences), batch_size)]:
+            batch_n += 1
+            # Corrupt a batch
+            corrupted = corrupt_batch(batch)
+            # Try reconstructing it
+            reconstructed = model(batch_to_tensor(corrupted))
+
+            # Compare
+            loss = criterion(reconstructed, torch.argmax(
+                batch_to_tensor(batch, as_input=False), dim=1))
+
+            # Backprop
+            loss.backward(retain_graph=True)
+            optimizer.step()
+            model.zero_grad()
+
+            guesses = torch.argmax(reconstructed, dim=1)
+            real_answers = torch.argmax(batch_to_tensor(batch, as_input=False),
+                                        dim=1)
+            corrects = torch.eq(guesses, real_answers)
+            acc = sum(corrects).item() / batch_size
+
+            if(batch_n % 500 == 0):
+                print('[%d, %d] loss: %.3f, acc: %.3f' %
+                      (batch_n, epoch, loss.item(), acc))
+            if max_n_batches == batch_n:
+                return
+    else:
+        print(len(sequences))
+        with torch.no_grad():
+            n_batches = 0
+            total_acc = 0
+            for batch in [sequences[i: i+batch_size] for i in
+                          range(0, len(sequences), batch_size)]:
+                corrupted = corrupt_batch(batch)
+                reconstructed = model(batch_to_tensor(corrupted))
+                loss = criterion(reconstructed, torch.argmax(
+                    batch_to_tensor(batch, as_input=False), dim=1))
+                guesses = torch.argmax(reconstructed, dim=1)
+                real_answers = torch.argmax(batch_to_tensor(
+                            batch, as_input=False), dim=1)
+                corrects = torch.eq(guesses, real_answers)
+                total_acc += sum(corrects).item() / batch_size
+                n_batches += 1
+                if max_n_batches == n_batches:
+                    break
+
+            print('[Validation, %d] loss: %.3f, test_acc: %.3f' %
+                  (epoch, loss.item(), total_acc/n_batches))
+
+
 print('\n', '*' * 5, f'Defining the model', '*' * 5)
 
-num_epochs = 1
+num_epochs = 3
 batch_size = 2048
 seq_length = 11
 input_size = 27
 
+# Taking e.g. 4 layers gives bad results
 num_layers = 2
 hidden_size = 10
 
@@ -120,57 +194,16 @@ print('Model:', model)
 print('\n', '*' * 5, f'Getting the data', '*' * 5)
 
 # Just get a long af text as toy data
-train_iter, test_iter = dataset.iters(1)
-words = list()
-[words.extend(item.text) for item in train_iter.data()]
-text = ''.join([c for c in words if c.isalpha() or c == ' '])
-text = unidecode.unidecode(text.lower())
-
 int2char = dict(enumerate(string.ascii_lowercase + ' '))
 char2int = {ch: ii for ii, ch in int2char.items()}
+
+iters = dataset.iters(1)
+train_sequences, val_sequences, test_sequences = iters2seqs(iters)
 
 
 print('\n', '*' * 5, f'Training the model', '*' * 5)
 
-# Like a sliding window, get seq_length chars one char at a time
-sequences = [text[i: i + seq_length] for i in
-             range(len(text) - seq_length)]
-print(len(sequences))
-for sequence in sequences:
-    if len(sequence) != seq_length:
-        print(len(sequence))
-        print(sequence)
-
-sequences = sequences[:10000*batch_size]
 for epoch in range(num_epochs):
     print('\n', '*' * 5, f'Epoch {epoch}', '*' * 5)
-
-    batch_n=0
-    # Cut sequences into batches
-    for batch in [sequences[i: i+batch_size] for i in
-                  range(0, len(sequences), batch_size)]:
-        batch_n += 1
-        # Corrupt a batch
-        corrupted = corrupt_batch(batch)
-        # Try reconstructing it
-        reconstructed = model(batch_to_tensor(corrupted))
-
-        # Compare
-        loss = criterion(reconstructed, torch.argmax(
-            batch_to_tensor(batch, as_input=False), dim=1))
-
-        # Backprop
-        loss.backward(retain_graph=True)
-        optimizer.step()
-        model.zero_grad()
-
-        guesses = torch.eq(torch.argmax(reconstructed, dim=1))
-        real_answers = torch.argmax(batch_to_tensor(batch, as_input=False),
-                                    dim=1)
-        corrects = sum(guesses, real_answers).item()
-        acc = corrects / batch_size
-
-        if(batch_n % 10 == 0):
-            print("Batch " + str(batch_n))
-            print('[%d, %d] loss: %.3f, test_acc: %.3f' %
-                  (batch_n, epoch, loss.item(), acc))
+    train_test(train_sequences, train=True, epoch=epoch)
+    train_test(val_sequences, train=False, epoch=epoch)
