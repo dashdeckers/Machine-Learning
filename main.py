@@ -16,6 +16,8 @@ class CharDenoiser(nn.Module):
         self.seq_length = seq_length
         self.input_size = input_size
 
+
+        ##TODO: We probably don't need half of these float()s here
         # LSTM:
         # Input shape = (batch, seq_len, inp_size)
         # Output shape = (batch, seq_len, num_directions * hidden_size)
@@ -26,21 +28,21 @@ class CharDenoiser(nn.Module):
             num_layers=num_layers,
             batch_first=True,
             bidirectional=True,
-        )
+        ).float()
         self.linear = nn.Linear(
             # x2 because bidirectional, same for hidden layer
             in_features=seq_length * hidden_size * 2,
             out_features=input_size
-        )
+        ).float()
         self.hidden = (
-            torch.zeros(num_layers * 2, batch_size, hidden_size),
-            torch.zeros(num_layers * 2, batch_size, hidden_size)
+            torch.zeros(num_layers * 2, batch_size, hidden_size).float(),
+            torch.zeros(num_layers * 2, batch_size, hidden_size).float()
         )
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = nn.Softmax(dim=1).float()
 
     def forward(self, batch):
         lstm_output, self.hidden = self.lstm(
-            batch.view(self.batch_size, self.seq_length, self.input_size),
+            batch.view(self.batch_size, self.seq_length, self.input_size).float(),
             self.hidden
         )
         prediction = self.linear(
@@ -54,10 +56,9 @@ def corrupt_batch(batch, chance=0.1):
     def corrupt(sequence, chance=chance):
         if np.random.random() < chance:
             mid = int(np.ceil(len(sequence) / 2))
-
             return (sequence[:mid-1]
                     + random.sample(string.ascii_lowercase, 1)[0]
-                    + sequence[mid+1:])
+                    + sequence[mid:])
         else:
             return sequence
 
@@ -80,11 +81,12 @@ def one_hot_code(input):
 
 
 def batch_to_tensor(batch):
-    pass
+    ohc = [one_hot_code(entry) for entry in batch]
+    return torch.as_tensor(np.vstack(ohc))
 
 
 def tensor_to_batch(tensor):
-    pass
+    return one_hot_code(tensor.numpy())
 
 
 print('\n', '*' * 5, f'Defining the model', '*' * 5)
@@ -92,7 +94,7 @@ print('\n', '*' * 5, f'Defining the model', '*' * 5)
 num_epochs = 1
 batch_size = 32
 seq_length = 11
-input_size = 128
+input_size = 27
 
 num_layers = 1
 hidden_size = 10
@@ -115,9 +117,8 @@ print('\n', '*' * 5, f'Getting the data', '*' * 5)
 train_iter, test_iter = dataset.iters(1)
 words = list()
 [words.extend(item.text) for item in train_iter.data()]
-text = ' '.join(words)
-# preprocess: filter(c.isalpha() or c == ' ')
-# preprocess: lowercase
+text = ''.join([c for c in words if c.isalpha() or c == ' '])
+text = text.lower()
 
 int2char = dict(enumerate(string.ascii_lowercase + ' '))
 char2int = {ch: ii for ii, ch in int2char.items()}
@@ -128,6 +129,10 @@ print('\n', '*' * 5, f'Training the model', '*' * 5)
 # Like a sliding window, get seq_length chars one char at a time
 sequences = [text[i: i + seq_length] for i in
              range(len(text) - seq_length)]
+for sequence in sequences:
+    if len(sequence) != seq_length:
+        print(len(sequence))
+        print(sequence)
 
 for epoch in range(num_epochs):
     print('\n', '*' * 5, f'Epoch {epoch}', '*' * 5)
@@ -135,9 +140,15 @@ for epoch in range(num_epochs):
     # Cut sequences into batches
     for batch in [sequences[i: i+batch_size] for i in
                   range(0, len(sequences), batch_size)]:
+        if len(batch) != batch_size:
+            print(len(batch))
+        for sequence in batch:
+            if len(sequence) != seq_length:
+                print(len(sequence))
 
         # Corrupt a batch
         corrupted = corrupt_batch(batch)
+        print(np.shape(corrupted))
         # Try reconstructing it
         reconstructed = model(batch_to_tensor(corrupted))
 
