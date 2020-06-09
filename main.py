@@ -34,23 +34,31 @@ class CharDenoiser(nn.Module):
             in_features=seq_length * hidden_size * 2,
             out_features=input_size
         )
-        self.hidden = (
-            torch.zeros(num_layers * 2, batch_size, hidden_size),
-            torch.zeros(num_layers * 2, batch_size, hidden_size)
-        )
+
         self.softmax = nn.Softmax(dim=1)
+
+        self.classifier = nn.Linear(
+            in_features=seq_length * hidden_size * 2,
+            out_features=input_size
+        )
+
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, batch):
         lstm_output, _ = self.lstm(
-            batch.view(self.batch_size, self.seq_length, self.input_size)
-            .float()#,
-            #self.hidden
+            batch.view(self.batch_size, self.seq_length, self.input_size).float()
         )
         prediction = self.linear(
             lstm_output.contiguous()
             .view(self.batch_size, self.seq_length * self.hidden_size * 2,)
         )
-        return self.softmax(prediction)#.argmax()
+
+        classification = self.classifier(
+            lstm_output.contiguous()
+            .view(self.batch_size, self.seq_length * self.hidden_size * 2,)
+        )
+        return torch.cat((self.softmax(prediction),
+                          self.sigmoid(classification)), dim=1)
 
 
 def corrupt_batch(batch, chance=0.1):
@@ -63,7 +71,6 @@ def corrupt_batch(batch, chance=0.1):
                     + sequence[mid:])
         else:
             return sequence
-
     return list(map(corrupt, batch))
 
 
@@ -82,12 +89,23 @@ def one_hot_code(input):
         return "".join(decoded)
 
 
-def batch_to_tensor(batch, as_input=True):
+# Batch to tensor generates input and output data
+# It's a bit of a misnomer as it does more stuff for output data
+def batch_to_tensor(batch, as_input=True, alt=None):
     if as_input:
         ohc = [one_hot_code(entry) for entry in batch]
     else:
-        mid = int(np.ceil(seq_length / 2))
-        ohc = [one_hot_code(entry[mid]) for entry in batch]
+        assert(alt != None)
+        mid = int(np.ceil(seq_length / 2))-1
+        ohc = []
+        for i, entry in enumerate(batch):
+            seq = one_hot_code(entry[mid])
+            if entry[mid] == alt[i][mid]:
+                corrupted = 0
+            else:
+                corrupted = 1
+            seq = np.append(seq, corrupted)
+            ohc.append(seq)
     return torch.as_tensor(np.vstack(ohc))
 
 
@@ -126,7 +144,7 @@ def train_test(sequences, train=True, epoch=0, max_n_batches=-1):
 
             # Compare
             loss = criterion(reconstructed, torch.argmax(
-                batch_to_tensor(batch, as_input=False), dim=1))
+                batch_to_tensor(batch, as_input=False, alt=batch), dim=1))
 
             # Backprop
             loss.backward(retain_graph=True)
@@ -134,7 +152,7 @@ def train_test(sequences, train=True, epoch=0, max_n_batches=-1):
             model.zero_grad()
 
             guesses = torch.argmax(reconstructed, dim=1)
-            real_answers = torch.argmax(batch_to_tensor(batch, as_input=False),
+            real_answers = torch.argmax(batch_to_tensor(batch, as_input=False, alt=corrupted),
                                         dim=1)
             corrects = torch.eq(guesses, real_answers)
             acc = sum(corrects).item() / batch_size
@@ -154,10 +172,10 @@ def train_test(sequences, train=True, epoch=0, max_n_batches=-1):
                 corrupted = corrupt_batch(batch)
                 reconstructed = model(batch_to_tensor(corrupted))
                 loss = criterion(reconstructed, torch.argmax(
-                    batch_to_tensor(batch, as_input=False), dim=1))
+                    batch_to_tensor(batch, as_input=False, alt=corrupted), dim=1))
                 guesses = torch.argmax(reconstructed, dim=1)
                 real_answers = torch.argmax(batch_to_tensor(
-                            batch, as_input=False), dim=1)
+                            batch, as_input=False, alt=corrupted), dim=1)
                 corrects = torch.eq(guesses, real_answers)
                 total_acc += sum(corrects).item() / batch_size
                 n_batches += 1
