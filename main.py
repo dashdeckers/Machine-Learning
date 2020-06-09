@@ -123,7 +123,7 @@ def batch_to_tensor(batch, as_input=True, alt=None):
         mid = int(np.ceil(seq_length / 2))-1
         ohc = []
         for i, entry in enumerate(batch):
-            seq = one_hot_code(entry[mid])
+            seq = (one_hot_code(entry[mid]))
             if entry[mid] == alt[i][mid]:
                 corrupted = 0
             else:
@@ -164,27 +164,39 @@ def determine_accuracy(output, batch, alt, batch_n=0, epoch=0, label="", logging
     class_corrects = torch.eq(output[:, -1].round(), correct_output[:, -1])
     # Either the classifier has to be correct
     # Or the classifier has to be false and the prediction correct
-    corrects = class_corrects | (~(output[:, -1].round()
-                                                .bool()) & pred_corrects)
-
-    if logging:
-        writer_dict.get('runs/Class_corrects/'+label).add_scalar(
-                        'dat',
-                        sum(class_corrects).item() / batch_size,
-                        batch_n*(epoch+1))
-        writer_dict.get('runs/Pred_corrects/'+label).add_scalar(
-                        'dat',
-                        sum(pred_corrects).item() / batch_size,
-                        batch_n*(epoch+1))
-        writer_dict.get('runs/True_corrects/'+label).add_scalar(
-                        'dat',
-                        sum(corrects).item() / batch_size,
-                        batch_n*(epoch+1))
+    correct_keeps = (class_corrects & ~(output[:, -1].round().bool()))
+    correct_changes = ((output[:, -1].round().bool()) & pred_corrects)
+    corrects = correct_keeps | correct_changes
 
     Class_corrects = sum(class_corrects).item() / batch_size
     Pred_corrects = sum(pred_corrects).item() / batch_size
     True_corrects = sum(corrects).item() / batch_size
-    return (Class_corrects, Pred_corrects, True_corrects)
+
+    # Rate where when something is correctly changed,
+    # it is also correctly predicted
+    if sum(class_corrects & output[:, -1].round().bool()) == 0:
+        Repaired_corrects = 0
+    else:
+        Repaired_corrects = sum(correct_changes).item() / sum(
+                            output[:, -1].round().bool()).item()
+    if logging:
+        writer_dict.get('runs/Class_corrects/'+label).add_scalar(
+                        'dat',
+                        Class_corrects,
+                        batch_n*(epoch+1))
+        writer_dict.get('runs/Pred_corrects/'+label).add_scalar(
+                        'dat',
+                        Pred_corrects,
+                        batch_n*(epoch+1))
+        writer_dict.get('runs/True_corrects/'+label).add_scalar(
+                        'dat',
+                        True_corrects,
+                        batch_n*(epoch+1))
+        writer_dict.get('runs/Repaired_corrects/'+label).add_scalar(
+                        'dat',
+                        Repaired_corrects,
+                        batch_n*(epoch+1))
+    return (Class_corrects, Pred_corrects, True_corrects, Repaired_corrects)
 
 
 def train_test(sequences, model, optimizer,
@@ -201,8 +213,9 @@ def train_test(sequences, model, optimizer,
             reconstructed = model(batch_to_tensor(corrupted))
 
             # Compare
-            loss = criterion(reconstructed, torch.argmax(
-                batch_to_tensor(batch, as_input=False, alt=batch), dim=1))
+            loss = criterion(reconstructed,
+                             batch_to_tensor(batch, as_input=False,
+                                             alt=corrupted).float())
 
             # Backprop
             loss.backward(retain_graph=True)
@@ -212,8 +225,8 @@ def train_test(sequences, model, optimizer,
                             'dat', loss.item(),
                             batch_n*(epoch+1))
 
-            _, _, acc = determine_accuracy(reconstructed, batch, corrupted,
-                                           batch_n, epoch, "train/" + label)
+            _, _, acc, _ = determine_accuracy(reconstructed, batch, corrupted,
+                                              batch_n, epoch, "train/" + label)
             if(batch_n % 500 == 0):
                 print(label + '[%d, %d] loss: %.3f, acc: %.3f' %
                       (batch_n, epoch, loss.item(), acc))
@@ -225,20 +238,22 @@ def train_test(sequences, model, optimizer,
             class_acc = 0
             pred_acc = 0
             true_acc = 0
+            repaired_acc = 0
             total_loss = 0
             for batch in [sequences[i: i+batch_size] for i in
                           range(0, len(sequences), batch_size)]:
                 corrupted = corrupt_batch(batch)
                 reconstructed = model(batch_to_tensor(corrupted))
-                loss = criterion(reconstructed, torch.argmax(
-                    batch_to_tensor(batch,
-                                    as_input=False, alt=corrupted), dim=1))
-                clacc, precc, truecc = determine_accuracy(
+                loss = criterion(reconstructed,
+                                 batch_to_tensor(batch, as_input=False,
+                                                 alt=corrupted).float())
+                clacc, precc, truecc, repacc = determine_accuracy(
                                 reconstructed, batch, corrupted, logging=False)
                 total_loss += loss
                 class_acc += clacc
                 pred_acc += precc
                 true_acc += truecc
+                repaired_acc += repacc
                 n_batches += 1
                 if max_n_batches == n_batches:
                     break
@@ -264,6 +279,10 @@ def train_test(sequences, model, optimizer,
                             test_type + '/'+label).add_scalar(
                                 'dat', true_acc/n_batches,
                                 epoch*number_train_batch)
+            writer_dict.get('runs/Repaired_corrects/' +
+                            test_type + '/'+label).add_scalar(
+                                'dat', repaired_acc/n_batches,
+                                epoch*number_train_batch)
             label = test_type + "/" + label
             print('[' + label + ' %d] loss: %.3f, test_acc: %.3f' %
                   (epoch, total_loss/n_batches, true_acc/n_batches))
@@ -272,14 +291,14 @@ def train_test(sequences, model, optimizer,
 print('\n', '*' * 5, f'Defining the model', '*' * 5)
 
 torch.set_num_threads(12)
-num_epochs = 2
+num_epochs = 10
 batch_size = 2048
-seq_length = 21
+seq_length = 31
 input_size = 27
 
 # Taking e.g. 4 layers gives bad results
 num_layers = 2
-hidden_size = 32
+hidden_size = 42
 
 model = CharDenoiser(
     input_size,
@@ -297,7 +316,7 @@ disjoint_model = CharDenoiser(
     seq_length,
     disjoint=True
 )
-criterion = torch.nn.CrossEntropyLoss()
+criterion = torch.nn.BCELoss()
 optimizer = torch.optim.Adam(model.parameters())
 disjoint_optimizer = torch.optim.Adam(disjoint_model.parameters())
 print('Model:', model)
@@ -317,7 +336,8 @@ train_sequences, val_sequences, test_sequences = iters2seqs(iters)
 number_train_batch = len(train_sequences) / batch_size
 
 runs = ["runs"]
-metrics = ["loss", "True_corrects", "Pred_corrects", "Class_corrects"]
+metrics = ["loss", "True_corrects", "Pred_corrects",
+           "Class_corrects", "Repaired_corrects"]
 datas = ["train", "val", "test"]
 joins = ["Conjoined", "Disjoined"]
 
