@@ -186,23 +186,23 @@ def determine_accuracy(output, batch, alt, batch_n=0, epoch=0, label="", logging
         writer_dict.get('runs/Class_corrects/'+label).add_scalar(
                         'dat',
                         Class_corrects,
-                        batch_n*(epoch+1))
+                        batch_n+(epoch+1)*number_train_batch)
         writer_dict.get('runs/Pred_corrects/'+label).add_scalar(
                         'dat',
                         Pred_corrects,
-                        batch_n*(epoch+1))
+                        batch_n+(epoch+1)*number_train_batch)
         writer_dict.get('runs/True_corrects/'+label).add_scalar(
                         'dat',
                         True_corrects,
-                        batch_n*(epoch+1))
+                        batch_n+(epoch+1)*number_train_batch)
         writer_dict.get('runs/Repaired_corrects/'+label).add_scalar(
                         'dat',
                         Repaired_corrects,
-                        batch_n*(epoch+1))
+                        batch_n+(epoch+1)*number_train_batch)
         writer_dict.get('runs/Change_rate/'+label).add_scalar(
                         'dat',
                         Change_rates,
-                        batch_n*(epoch+1))
+                        batch_n+(epoch+1)*number_train_batch)
     return (Class_corrects, Pred_corrects, True_corrects,
             Repaired_corrects, Change_rates)
 
@@ -231,7 +231,7 @@ def train_test(sequences, model, optimizer,
             model.zero_grad()
             writer_dict.get('runs/loss/train/'+label).add_scalar(
                             'dat', loss.item(),
-                            batch_n*(epoch+1))
+                            batch_n+(epoch+1)*number_train_batch)
 
             _, _, acc, _, _ = determine_accuracy(reconstructed, batch,
                                                  corrupted,
