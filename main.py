@@ -85,17 +85,10 @@ class CharDenoiser(nn.Module):
                           self.sigmoid(classification)), dim=1)
 
 
-def corrupt_batch(batch, chance=0.3):
-    # just sets some char to 'z' right now
-    def corrupt(sequence, chance=chance):
-        if np.random.random() < chance:
-            mid = int(np.ceil(len(sequence) / 2))
-            return (sequence[:mid-1]
-                    + random.sample(string.ascii_lowercase, 1)[0]
-                    + sequence[mid:])
-        else:
-            return sequence
-    return list(map(corrupt, batch))
+def corrupt(text, chance=0.3):
+    return "".join([c if np.random.random() > chance else
+                    random.choice(string.ascii_lowercase + ' ')
+                    for c in text])
 
 
 def one_hot_code(input):
@@ -134,7 +127,7 @@ def batch_to_tensor(batch, as_input=True, alt=None):
 
 
 def tensor_to_batch(tensor):
-    return one_hot_code(tensor.numpy())
+    return one_hot_code(tensor.detach().numpy()[:, -1])
 
 
 def iters2seqs(iters):
@@ -142,15 +135,23 @@ def iters2seqs(iters):
     for iter in iters:
         words = list()
         [words.extend(item.text) for item in iter.data()]
-        text = ''.join([unidecode(c) for c in words
-                        if unidecode(c).isalpha() or unidecode(c) == ' '])
+        text = ' '.join([unidecode(w) for w in words
+                        if unidecode(w).isalpha() or unidecode(w) == ' '])
         text = text.lower()
         # Like a sliding window, get seq_length chars one char at a time
         sequences = [text[i: i + seq_length] for i in
-                     range(len(text) - seq_length)]
+                     range(0, len(text) - seq_length)]
+        corrupted_text = corrupt(text)
+        corrupted_sequences = [corrupted_text[i: i + seq_length] for i in
+                               range(0, len(corrupted_text) - seq_length)]
         max_batches = int(len(sequences)/batch_size)
         sequences = sequences[:max_batches*batch_size]
-        seq_sets.append(sequences)
+        corrupted_sequences = corrupted_sequences[:max_batches*batch_size]
+
+        # pair = list(zip(sequences, corrupted_sequences))
+        # random.shuffle(pair)
+        # sequences, corrupted_sequences = zip(*pair)
+        seq_sets.append((sequences, corrupted_sequences))
     return seq_sets
 
 
@@ -186,58 +187,63 @@ def determine_accuracy(output, batch, alt, batch_n=0, epoch=0, label="", logging
         writer_dict.get('runs/Class_corrects/'+label).add_scalar(
                         'dat',
                         Class_corrects,
-                        batch_n+(epoch+1)*number_train_batch)
+                        batch_n+(epoch)*number_train_batch)
         writer_dict.get('runs/Pred_corrects/'+label).add_scalar(
                         'dat',
                         Pred_corrects,
-                        batch_n+(epoch+1)*number_train_batch)
+                        batch_n+(epoch)*number_train_batch)
         writer_dict.get('runs/True_corrects/'+label).add_scalar(
                         'dat',
                         True_corrects,
-                        batch_n+(epoch+1)*number_train_batch)
+                        batch_n+(epoch)*number_train_batch)
         writer_dict.get('runs/Repaired_corrects/'+label).add_scalar(
                         'dat',
                         Repaired_corrects,
-                        batch_n+(epoch+1)*number_train_batch)
+                        batch_n+(epoch)*number_train_batch)
         writer_dict.get('runs/Change_rate/'+label).add_scalar(
                         'dat',
                         Change_rates,
-                        batch_n+(epoch+1)*number_train_batch)
+                        batch_n+(epoch)*number_train_batch)
     return (Class_corrects, Pred_corrects, True_corrects,
             Repaired_corrects, Change_rates)
 
 
 def train_test(sequences, model, optimizer,
-               train=True, epoch=0, max_n_batches=10, label="", eval=False):
+               train=True, epoch=0, max_n_batches=-1, label="", eval=False):
     if train:
-        batch_n = 0
         # Cut sequences into batches
-        for batch in [train_sequences[i: i+batch_size] for i in
-                      range(0, len(train_sequences), batch_size)]:
-            batch_n += 1
-            # Corrupt a batch
-            corrupted = corrupt_batch(batch)
+        print(len(sequences[0]))
+        for batch_n in range(int(len(sequences[0]) / batch_size)):
+            batch = sequences[0][batch_n*batch_size:
+                                 batch_n*batch_size+batch_size]
+            corrupted = sequences[1][batch_n*batch_size:
+                                     batch_n*batch_size+batch_size]
+            # print(batch[0])
+            # print(corrupted[0])
+            # print(batch[1])
+            # print(corrupted[1])
+
+            model.zero_grad()
+
             # Try reconstructing it
             reconstructed = model(batch_to_tensor(corrupted))
-
             # Compare
             loss = criterion(reconstructed,
                              batch_to_tensor(batch, as_input=False,
                                              alt=corrupted).float())
 
             # Backprop
-            loss.backward(retain_graph=True)
+            loss.backward(retain_graph=False)
             optimizer.step()
-            model.zero_grad()
             writer_dict.get('runs/loss/train/'+label).add_scalar(
                             'dat', loss.item(),
-                            batch_n+(epoch+1)*number_train_batch)
+                            batch_n+(epoch)*number_train_batch)
 
             _, _, acc, _, _ = determine_accuracy(reconstructed, batch,
                                                  corrupted,
                                                  batch_n, epoch=epoch,
                                                  label="train/" + label)
-            if(batch_n % 500 == 0):
+            if(batch_n % 100 == 0):
                 print(label + '[%d, %d] loss: %.3f, acc: %.3f' %
                       (batch_n, epoch, loss.item(), acc))
             if max_n_batches == batch_n:
@@ -251,9 +257,11 @@ def train_test(sequences, model, optimizer,
             repaired_acc = 0
             total_loss = 0
             total_change = 0
-            for batch in [sequences[i: i+batch_size] for i in
-                          range(0, len(sequences), batch_size)]:
-                corrupted = corrupt_batch(batch)
+            for batch_n in range(int(len(sequences[0]) / batch_size)):
+                batch = sequences[0][batch_n*batch_size:
+                                     batch_n*batch_size+batch_size]
+                corrupted = sequences[1][batch_n*batch_size:
+                                         batch_n*batch_size+batch_size]
                 reconstructed = model(batch_to_tensor(corrupted))
                 loss = criterion(reconstructed,
                                  batch_to_tensor(batch, as_input=False,
@@ -278,27 +286,27 @@ def train_test(sequences, model, optimizer,
             writer_dict.get('runs/loss/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', total_loss/n_batches,
-                                (epoch+1)*number_train_batch)
+                                (epoch)*number_train_batch)
             writer_dict.get('runs/Class_corrects/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', class_acc/n_batches,
-                                (epoch+1)*number_train_batch)
+                                (epoch)*number_train_batch)
             writer_dict.get('runs/Pred_corrects/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', pred_acc/n_batches,
-                                (epoch+1)*number_train_batch)
+                                (epoch)*number_train_batch)
             writer_dict.get('runs/True_corrects/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', true_acc/n_batches,
-                                (epoch+1)*number_train_batch)
+                                (epoch)*number_train_batch)
             writer_dict.get('runs/Repaired_corrects/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', repaired_acc/n_batches,
-                                (epoch+1)*number_train_batch)
+                                (epoch)*number_train_batch)
             writer_dict.get('runs/Change_rate/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', total_change/n_batches,
-                                (epoch+1)*number_train_batch)
+                                (epoch)*number_train_batch)
             label = test_type + "/" + label
             print('[' + label + ' %d] loss: %.3f, test_acc: %.3f' %
                   (epoch, total_loss/n_batches, true_acc/n_batches))
@@ -348,11 +356,11 @@ int2char = dict(enumerate(string.ascii_lowercase + ' '))
 char2int = {ch: ii for ii, ch in int2char.items()}
 
 # Fetch data and make sequences
-iters = dataset.iters(1)
+iters = dataset.iters(1, bptt_len=0)
 train_sequences, val_sequences, test_sequences = iters2seqs(iters)
 
 # Determine number of batches for TB logging
-number_train_batch = len(train_sequences) / batch_size
+number_train_batch = len(train_sequences[0]) / batch_size
 
 # Define strings for TB logging lines
 runs = ["runs"]
