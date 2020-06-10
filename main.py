@@ -168,9 +168,12 @@ def determine_accuracy(output, batch, alt, batch_n=0, epoch=0, label="", logging
     correct_changes = ((output[:, -1].round().bool()) & pred_corrects)
     corrects = correct_keeps | correct_changes
 
+    changes = (output[:, -1].round().bool())
+
     Class_corrects = sum(class_corrects).item() / batch_size
     Pred_corrects = sum(pred_corrects).item() / batch_size
     True_corrects = sum(corrects).item() / batch_size
+    Change_rates = sum(changes).item() / batch_size
 
     # Rate where when something is correctly changed,
     # it is also correctly predicted
@@ -196,11 +199,16 @@ def determine_accuracy(output, batch, alt, batch_n=0, epoch=0, label="", logging
                         'dat',
                         Repaired_corrects,
                         batch_n*(epoch+1))
-    return (Class_corrects, Pred_corrects, True_corrects, Repaired_corrects)
+        writer_dict.get('runs/Change_rate/'+label).add_scalar(
+                        'dat',
+                        Change_rates,
+                        batch_n*(epoch+1))
+    return (Class_corrects, Pred_corrects, True_corrects,
+            Repaired_corrects, Change_rates)
 
 
 def train_test(sequences, model, optimizer,
-               train=True, epoch=0, max_n_batches=-1, label="", eval=False):
+               train=True, epoch=0, max_n_batches=10, label="", eval=False):
     if train:
         batch_n = 0
         # Cut sequences into batches
@@ -225,8 +233,10 @@ def train_test(sequences, model, optimizer,
                             'dat', loss.item(),
                             batch_n*(epoch+1))
 
-            _, _, acc, _ = determine_accuracy(reconstructed, batch, corrupted,
-                                              batch_n, epoch, "train/" + label)
+            _, _, acc, _, _ = determine_accuracy(reconstructed, batch,
+                                                 corrupted,
+                                                 batch_n, epoch=epoch,
+                                                 label="train/" + label)
             if(batch_n % 500 == 0):
                 print(label + '[%d, %d] loss: %.3f, acc: %.3f' %
                       (batch_n, epoch, loss.item(), acc))
@@ -240,6 +250,7 @@ def train_test(sequences, model, optimizer,
             true_acc = 0
             repaired_acc = 0
             total_loss = 0
+            total_change = 0
             for batch in [sequences[i: i+batch_size] for i in
                           range(0, len(sequences), batch_size)]:
                 corrupted = corrupt_batch(batch)
@@ -247,13 +258,14 @@ def train_test(sequences, model, optimizer,
                 loss = criterion(reconstructed,
                                  batch_to_tensor(batch, as_input=False,
                                                  alt=corrupted).float())
-                clacc, precc, truecc, repacc = determine_accuracy(
+                clacc, precc, truecc, repacc, changes = determine_accuracy(
                                 reconstructed, batch, corrupted, logging=False)
                 total_loss += loss
                 class_acc += clacc
                 pred_acc += precc
                 true_acc += truecc
                 repaired_acc += repacc
+                total_change += changes
                 n_batches += 1
                 if max_n_batches == n_batches:
                     break
@@ -283,6 +295,10 @@ def train_test(sequences, model, optimizer,
                             test_type + '/'+label).add_scalar(
                                 'dat', repaired_acc/n_batches,
                                 (epoch+1)*number_train_batch)
+            writer_dict.get('runs/Change_rate/' +
+                            test_type + '/'+label).add_scalar(
+                                'dat', total_change/n_batches,
+                                (epoch+1)*number_train_batch)
             label = test_type + "/" + label
             print('[' + label + ' %d] loss: %.3f, test_acc: %.3f' %
                   (epoch, total_loss/n_batches, true_acc/n_batches))
@@ -290,16 +306,17 @@ def train_test(sequences, model, optimizer,
 
 print('\n', '*' * 5, f'Defining the model', '*' * 5)
 
-torch.set_num_threads(12)
+# Set parameters for model
 num_epochs = 10
 batch_size = 2048
-seq_length = 31
+seq_length = 21
 input_size = 27
 
 # Taking e.g. 4 layers gives bad results
 num_layers = 2
-hidden_size = 42
+hidden_size = 32
 
+# Instantiate models
 model = CharDenoiser(
     input_size,
     hidden_size,
@@ -316,41 +333,47 @@ disjoint_model = CharDenoiser(
     seq_length,
     disjoint=True
 )
+
+# Instantiate training utilities
 criterion = torch.nn.BCELoss()
 optimizer = torch.optim.Adam(model.parameters())
 disjoint_optimizer = torch.optim.Adam(disjoint_model.parameters())
+
 print('Model:', model)
-
 print('Disjoint Model:', model)
-
-
 print('\n', '*' * 5, f'Getting the data', '*' * 5)
 
-# Just get a long af text as toy data
+# Instantiate ohc dictionary
 int2char = dict(enumerate(string.ascii_lowercase + ' '))
 char2int = {ch: ii for ii, ch in int2char.items()}
 
+# Fetch data and make sequences
 iters = dataset.iters(1)
 train_sequences, val_sequences, test_sequences = iters2seqs(iters)
 
+# Determine number of batches for TB logging
 number_train_batch = len(train_sequences) / batch_size
 
+# Define strings for TB logging lines
 runs = ["runs"]
 metrics = ["loss", "True_corrects", "Pred_corrects",
-           "Class_corrects", "Repaired_corrects"]
+           "Class_corrects", "Repaired_corrects", "Change_rate"]
 datas = ["train", "val", "test"]
 joins = ["Conjoined", "Disjoined"]
 
+# Concatenate combinations of these strings
 combinations = list(itertools.product(runs, metrics, datas, joins))
 writer_strings = ['/'.join(line)for line in combinations]
 
+# Instantiate TB writer dict
 writers = [SummaryWriter(log_dir=string) for string in writer_strings]
 writer_dict = dict(zip(writer_strings, writers))
 
-print('\n', '*' * 5, f'Training the model', '*' * 5)
 
+print('\n', '*' * 5, f'Training the model', '*' * 5)
 for epoch in range(num_epochs):
     print('\n', '*' * 5, f'Epoch {epoch}', '*' * 5)
+    # Train and validate conjoined model
     train_test(train_sequences, model=model,
                optimizer=optimizer, train=True,
                epoch=epoch, label="Conjoined")
@@ -358,12 +381,14 @@ for epoch in range(num_epochs):
                optimizer=optimizer, train=False,
                epoch=epoch, label="Conjoined")
 
+    # Train and validate disjoined model
     train_test(train_sequences, model=disjoint_model,
                optimizer=disjoint_optimizer, train=True,
                epoch=epoch, label="Disjoined")
     train_test(val_sequences, model=disjoint_model,
                optimizer=disjoint_optimizer, train=False,
                epoch=epoch, label="Disjoined")
+# Evaluate both models
 train_test(test_sequences, model=model,
            optimizer=optimizer, train=False,
            epoch=epoch, label="Conjoined", eval=True)
