@@ -1,0 +1,14 @@
+Test results:
+
+Classifier:
+	Conjoined: 0.8619
+	Disjoined: 0.8690
+Predictor:
+	Conjoined: 0.7894
+	Disjoined: 0.7930
+Loss:
+	Conjoined: 0.0545
+	Disjoined: 0.0533
+True: (Accuracy of resulting document)
+	Conjoined: 0.7876
+	Disjoined: 0.7915
