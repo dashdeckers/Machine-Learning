@@ -358,6 +358,9 @@ char2int = {ch: ii for ii, ch in int2char.items()}
 # Fetch data and make sequences
 iters = dataset.iters(1, bptt_len=0)
 train_sequences, val_sequences, test_sequences = iters2seqs(iters)
+print(len(train_sequences[0]))
+print(len(val_sequences[0]))
+print(len(test_sequences[0]))
 
 # Determine number of batches for TB logging
 number_train_batch = len(train_sequences[0]) / batch_size

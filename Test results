@@ -1,4 +1,21 @@
-Test results:
+Train on 9.4 million sequences
+Valid on 9.4 million sequences
+30% corruption
+10 epochs of 46k batches of 2048 sequences
+
+num_epochs = 10
+batch_size = 2048
+seq_length = 21
+input_size = 27
+
+num_layers = 2
+hidden_size = 32
+
+Wikipedia tokens which are exclusively alphabetical
+To lower case
+Concatenated with spaces between tokens
+
+Test results on 10.4 million sequences:
 
 Classifier:
 	Conjoined: 0.8619
