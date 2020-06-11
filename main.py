@@ -363,7 +363,7 @@ train_sequences, val_sequences, test_sequences = iters2seqs(iters)
 number_train_batch = len(train_sequences[0]) / batch_size
 
 # Define strings for TB logging lines
-runs = ["runs"]
+runs = ["runs2"]
 metrics = ["loss", "True_corrects", "Pred_corrects",
            "Class_corrects", "Repaired_corrects", "Change_rate"]
 datas = ["train", "val", "test"]
