@@ -286,27 +286,27 @@ def train_test(sequences, model, optimizer,
             writer_dict.get('runs/loss/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', total_loss/n_batches,
-                                (epoch)*number_train_batch)
+                                (epoch+1)*number_train_batch)
             writer_dict.get('runs/Class_corrects/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', class_acc/n_batches,
-                                (epoch)*number_train_batch)
+                                (epoch+1)*number_train_batch)
             writer_dict.get('runs/Pred_corrects/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', pred_acc/n_batches,
-                                (epoch)*number_train_batch)
+                                (epoch+1)*number_train_batch)
             writer_dict.get('runs/True_corrects/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', true_acc/n_batches,
-                                (epoch)*number_train_batch)
+                                (epoch+1)*number_train_batch)
             writer_dict.get('runs/Repaired_corrects/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', repaired_acc/n_batches,
-                                (epoch)*number_train_batch)
+                                (epoch+1)*number_train_batch)
             writer_dict.get('runs/Change_rate/' +
                             test_type + '/'+label).add_scalar(
                                 'dat', total_change/n_batches,
-                                (epoch)*number_train_batch)
+                                (epoch+1)*number_train_batch)
             label = test_type + "/" + label
             print('[' + label + ' %d] loss: %.3f, test_acc: %.3f' %
                   (epoch, total_loss/n_batches, true_acc/n_batches))
