@@ -315,13 +315,13 @@ def train_test(sequences, model, optimizer,
 print('\n', '*' * 5, f'Defining the model', '*' * 5)
 
 # Set parameters for model
-num_epochs = 10
-batch_size = 2048
+num_epochs = 40
+batch_size = 100
 seq_length = 21
 input_size = 27
 
 # Taking e.g. 4 layers gives bad results
-num_layers = 2
+num_layers = 1
 hidden_size = 32
 
 # Instantiate models
@@ -366,7 +366,7 @@ print(len(test_sequences[0]))
 number_train_batch = len(train_sequences[0]) / batch_size
 
 # Define strings for TB logging lines
-runs = ["runs2"]
+runs = ["runs"]
 metrics = ["loss", "True_corrects", "Pred_corrects",
            "Class_corrects", "Repaired_corrects", "Change_rate"]
 datas = ["train", "val", "test"]
@@ -387,22 +387,23 @@ for epoch in range(num_epochs):
     # Train and validate conjoined model
     train_test(train_sequences, model=model,
                optimizer=optimizer, train=True,
-               epoch=epoch, label="Conjoined")
+               epoch=epoch, label="Conjoined", max_n_batches=100)
     train_test(val_sequences, model=model,
                optimizer=optimizer, train=False,
-               epoch=epoch, label="Conjoined")
+               epoch=epoch, label="Conjoined", max_n_batches=100)
 
     # Train and validate disjoined model
     train_test(train_sequences, model=disjoint_model,
                optimizer=disjoint_optimizer, train=True,
-               epoch=epoch, label="Disjoined")
+               epoch=epoch, label="Disjoined", max_n_batches=100)
     train_test(val_sequences, model=disjoint_model,
                optimizer=disjoint_optimizer, train=False,
-               epoch=epoch, label="Disjoined")
+               epoch=epoch, label="Disjoined", max_n_batches=100)
+
 # Evaluate both models
 train_test(test_sequences, model=model,
            optimizer=optimizer, train=False,
-           epoch=epoch, label="Conjoined", eval=True)
+           epoch=epoch, label="Conjoined", eval=True, max_n_batches=100)
 train_test(test_sequences, model=disjoint_model,
            optimizer=disjoint_optimizer, train=False,
-           epoch=epoch, label="Disjoined", eval=True)
+           epoch=epoch, label="Disjoined", eval=True, max_n_batches=100)
