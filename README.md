@@ -1,2 +1,2 @@
 # Machine-Learning
-Playing around with Machine Learning algorithms, just for fun.
+Various Machine Learning projects, mostly implemented for courses at the University of Groningen and some for fun and practice.
