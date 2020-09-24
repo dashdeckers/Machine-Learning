@@ -196,7 +196,8 @@ def plot_2D_manifold_of_latent_variables(
         labelleft=False
     )
     plt.imshow(image_grid, cmap=cmap)
-    plt.savefig(exp['project_name']+"/latent.png", bbox_inches='tight', pad_inches=0)
+    plt.savefig(exp['project_name']+"/latent.png", bbox_inches='tight',
+                pad_inches=0)
     plt.close()
 
 
@@ -252,7 +253,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Load the model (exp must have the same architecture as the saved model)
-    # (beta and dataset arguments are irrelevant here since we don't create a new model)
+    # (beta and dataset arguments are irrelevant here since we don't create a
+    # new model)
     vae, exp = get_model(
         project_name=args.name,
         resume=True,

@@ -112,7 +112,7 @@ for name, (valid, train) in groupby(data, lambda g: g[0]):
 
 plt.title(f'Training and validation errors for different {comparison}')
 plt.ylabel(f"{' '.join(metric.split('_')).title()}")
-plt.xlabel(f'Epoch')
+plt.xlabel('Epoch')
 plt.xticks(list(range(n_epochs)))
 plt.yticks([x/10 for x in range(10)])
 plt.legend()

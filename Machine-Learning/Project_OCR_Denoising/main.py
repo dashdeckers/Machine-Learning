@@ -155,7 +155,8 @@ def iters2seqs(iters):
     return seq_sets
 
 
-def determine_accuracy(output, batch, alt, batch_n=0, epoch=0, label="", logging=True):
+def determine_accuracy(output, batch, alt, batch_n=0, epoch=0, label="",
+                       logging=True):
 
     guesses = torch.argmax(output[:, :-1], dim=1)
     correct_output = batch_to_tensor(batch, as_input=False, alt=alt)
@@ -312,7 +313,7 @@ def train_test(sequences, model, optimizer,
                   (epoch, total_loss/n_batches, true_acc/n_batches))
 
 
-print('\n', '*' * 5, f'Defining the model', '*' * 5)
+print('\n', '*' * 5, 'Defining the model', '*' * 5)
 
 # Set parameters for model
 num_epochs = 40
@@ -349,7 +350,7 @@ disjoint_optimizer = torch.optim.Adam(disjoint_model.parameters())
 
 print('Model:', model)
 print('Disjoint Model:', model)
-print('\n', '*' * 5, f'Getting the data', '*' * 5)
+print('\n', '*' * 5, 'Getting the data', '*' * 5)
 
 # Instantiate ohc dictionary
 int2char = dict(enumerate(string.ascii_lowercase + ' '))
@@ -381,7 +382,7 @@ writers = [SummaryWriter(log_dir=string) for string in writer_strings]
 writer_dict = dict(zip(writer_strings, writers))
 
 
-print('\n', '*' * 5, f'Training the model', '*' * 5)
+print('\n', '*' * 5, 'Training the model', '*' * 5)
 for epoch in range(num_epochs):
     print('\n', '*' * 5, f'Epoch {epoch}', '*' * 5)
     # Train and validate conjoined model

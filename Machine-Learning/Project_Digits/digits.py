@@ -49,7 +49,7 @@ def results(model, data, labels, show_list=[]):
 
     if show_list:
         # Helper function to print the mean and standard deviation of a list
-        def show_mean_std(n, l):
+        def show_mean_std(n, l):  # noqa
             print(f'{n.title()}: mean={np.mean(l):.3f}, std={np.std(l):.3f}')
 
         # Possible metrics as partial functions
